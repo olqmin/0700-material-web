@@ -1,0 +1,68 @@
+:root {
+  color-scheme: light;
+  --bg: #f8f9ff;
+  --surface: #ffffff;
+  --text: #1b1b1f;
+  --muted: #5f6368;
+}
+
+:root.dark {
+  color-scheme: dark;
+  --bg: #1b1b1f;
+  --surface: #2b2c31;
+  --text: #e5e1e6;
+  --muted: #c4c7cf;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, Roboto, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+.site-header {
+  padding: 2rem 1rem 1rem;
+  text-align: center;
+}
+
+.site-header h1 {
+  margin: 0;
+}
+
+.site-header p {
+  color: var(--muted);
+}
+
+.container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.demo-card {
+  background: var(--surface);
+  border-radius: 1rem;
+  padding: 1.25rem;
+  box-shadow: 0 2px 10px rgb(0 0 0 / 8%);
+}
+
+.field-row,
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+#message {
+  margin: 0;
+  color: var(--muted);
+  font-weight: 500;
+}

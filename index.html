@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Material Web Starter</title>
+    <meta name="description" content="Static Material Web starter for shared hosting." />
+    <link rel="stylesheet" href="styles.css" />
+
+    <script type="module" src="https://esm.run/@material/web/all.js"></script>
+    <script type="module" src="main.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <h1>Material Web Starter</h1>
+      <p>HTML + CSS + JS only (shared-hosting friendly)</p>
+    </header>
+
+    <main class="container">
+      <section class="demo-card">
+        <h2>Quick Demo</h2>
+
+        <div class="field-row">
+          <md-filled-text-field id="nameInput" label="Your name"></md-filled-text-field>
+          <md-filled-button id="greetBtn">Greet me</md-filled-button>
+        </div>
+
+        <div class="actions">
+          <md-outlined-button id="toggleThemeBtn">Toggle dark mode</md-outlined-button>
+          <md-assist-chip label="Static hosting ready"></md-assist-chip>
+          <md-filter-chip selected label="Material Web"></md-filter-chip>
+        </div>
+
+        <p id="message">Try entering your name and click “Greet me”.</p>
+      </section>
+    </main>
+  </body>
+</html>
