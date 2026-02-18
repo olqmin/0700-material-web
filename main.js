@@ -1,5 +1,6 @@
 const API_URL = 'https://admin.0700bezplatnite.com/0700backend/contact/getIOSContacts';
 const LOGO_BASE_URL = 'https://admin.0700bezplatnite.com';
+const FAVICON_SERVICE = 'https://www.google.com/s2/favicons?sz=128&domain_url=';
 
 const searchInput = document.getElementById('searchInput');
 const callList = document.getElementById('callList');
@@ -87,14 +88,11 @@ function repairTextMojibake(value) {
     decodeUtf8BytesAsCp1251(decodeLatin1BytesAsUtf8(input)),
   ];
 
-  return variants.reduce((best, candidate) => {
-    return textQuality(candidate) > textQuality(best) ? candidate : best;
-  }, input);
+  return variants.reduce((best, candidate) => (textQuality(candidate) > textQuality(best) ? candidate : best), input);
 }
 
 function collectLeafStrings(value, out = []) {
   if (value == null) return out;
-
   if (typeof value === 'string' || typeof value === 'number') {
     const text = `${value}`.trim();
     if (text) out.push(text);
@@ -161,20 +159,12 @@ function bestPhoneCandidate(candidates) {
 
   if (!cleaned.length) return '';
 
-  cleaned.sort((a, b) => {
-    const aDigits = (a.match(/[0-9]/g) || []).length;
-    const bDigits = (b.match(/[0-9]/g) || []).length;
-    return bDigits - aDigits;
-  });
-
+  cleaned.sort((a, b) => (b.match(/[0-9]/g) || []).length - (a.match(/[0-9]/g) || []).length);
   return cleaned[0];
 }
 
 function bestLogoCandidate(candidates) {
-  const cleaned = [...new Set(candidates)]
-    .map(normalizeLogoUrl)
-    .filter(Boolean);
-
+  const cleaned = [...new Set(candidates)].map(normalizeLogoUrl).filter(Boolean);
   if (!cleaned.length) return '';
 
   function logoScore(url) {
@@ -190,12 +180,36 @@ function bestLogoCandidate(candidates) {
   return cleaned[0];
 }
 
+function looksBrokenName(name) {
+  const value = `${name || ''}`.trim();
+  if (!value) return true;
+  const q = (value.match(/\?/g) || []).length;
+  return q >= 3 || q / Math.max(value.length, 1) > 0.18;
+}
+
+function normalizeAliasText(aliases) {
+  const value = `${aliases || ''}`.trim();
+  if (!value) return '';
+  return value.replace(/^\[/, '').replace(/\]$/, '').split(' ??????')[0].trim();
+}
+
+function fallbackLogoFromWebsite(website) {
+  const raw = `${website || ''}`.trim();
+  if (!raw) return '';
+
+  const fixed = raw.startsWith('http://') ? `https://${raw.slice(7)}` : raw;
+  const safe = fixed.startsWith('https://') ? fixed : `https://${fixed.replace(/^\/+/, '')}`;
+  return `${FAVICON_SERVICE}${encodeURIComponent(safe)}`;
+}
+
 function pickName(raw, index) {
   const name = bestTextCandidate(collectAliasCandidates(raw, [
     'name', 'fullname', 'displayname', 'contactname', 'title', 'companyname', 'firmname', 'ime', 'naimenovanie',
   ]));
 
-  return name || `Contact ${index + 1}`;
+  const aliasesText = normalizeAliasText(bestTextCandidate(collectAliasCandidates(raw, ['aliases', 'keywords'])));
+  if (looksBrokenName(name) && aliasesText) return aliasesText;
+  return name || aliasesText || `Contact ${index + 1}`;
 }
 
 function pickPhone(raw) {
@@ -215,9 +229,14 @@ function pickPaidPhone(raw, mainPhone) {
 }
 
 function pickLogo(raw) {
-  return bestLogoCandidate(collectAliasCandidates(raw, [
+  const explicitLogo = bestLogoCandidate(collectAliasCandidates(raw, [
     'logo', 'avatar', 'image', 'photo', 'profileimage', 'img', 'icon', 'picture', 'thumbnail', 'logourl', 'logoimage',
   ]));
+
+  if (explicitLogo) return explicitLogo;
+
+  const website = bestTextCandidate(collectAliasCandidates(raw, ['website', 'url', 'site']));
+  return fallbackLogoFromWebsite(website);
 }
 
 function normalizeContact(raw, index) {
