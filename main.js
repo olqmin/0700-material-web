@@ -16,16 +16,6 @@ function escapeHtml(value) {
     .replaceAll("'", '&#39;');
 }
 
-function pick(obj, keys) {
-  for (const key of keys) {
-    const value = obj?.[key];
-    if (value !== undefined && value !== null && `${value}`.trim() !== '') {
-      return `${value}`.trim();
-    }
-  }
-  return '';
-}
-
 function asList(payload) {
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload?.data)) return payload.data;
@@ -35,39 +25,100 @@ function asList(payload) {
 }
 
 function normalizeLogoUrl(logo) {
-  const value = `${logo || ''}`.trim();
+  const raw = `${logo || ''}`.trim();
+  if (!raw) return '';
+
+  const srcMatch = raw.match(/src\s*=\s*['\"]([^'\"]+)['\"]/i);
+  const value = (srcMatch?.[1] || raw).trim();
+
   if (!value) return '';
+  if (value.startsWith('//')) return `https:${value}`;
+  if (value.startsWith('http://')) return `https://${value.slice(7)}`;
+  if (value.startsWith('/')) return `${LOGO_BASE_URL}${value}`;
+  if (!/^https?:\/\//i.test(value)) return `${LOGO_BASE_URL}/${value.replace(/^\/+/, '')}`;
+  return value.replace(/^http:\/\//i, 'https://');
+}
 
-  if (value.startsWith('//')) {
-    return `https:${value}`;
+function normalizeKey(value) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9а-я]/gi, '');
+}
+
+function collectLeafStrings(value, out = []) {
+  if (value == null) return out;
+  if (typeof value === 'string' || typeof value === 'number') {
+    const text = `${value}`.trim();
+    if (text) out.push(text);
+    return out;
   }
 
-  if (value.startsWith('http://')) {
-    return `https://${value.slice('http://'.length)}`;
+  if (Array.isArray(value)) {
+    for (const item of value) collectLeafStrings(item, out);
+    return out;
   }
 
-  if (value.startsWith('/')) {
-    return `${LOGO_BASE_URL}${value}`;
+  if (typeof value === 'object') {
+    for (const nested of Object.values(value)) collectLeafStrings(nested, out);
   }
 
-  if (!/^https?:\/\//i.test(value)) {
-    return `${LOGO_BASE_URL}/${value.replace(/^\/+/, '')}`;
+  return out;
+}
+
+function pickByAliases(raw, aliases) {
+  const aliasSet = new Set(aliases.map(normalizeKey));
+  const candidates = [];
+
+  function walk(node, depth = 0) {
+    if (!node || typeof node !== 'object' || depth > 3) return;
+    if (Array.isArray(node)) {
+      for (const item of node) walk(item, depth + 1);
+      return;
+    }
+
+    for (const [key, value] of Object.entries(node)) {
+      const normalized = normalizeKey(key);
+      if ([...aliasSet].some((alias) => normalized === alias || normalized.includes(alias))) {
+        const values = collectLeafStrings(value);
+        candidates.push(...values);
+      }
+      if (value && typeof value === 'object') walk(value, depth + 1);
+    }
   }
 
-  return value;
+  walk(raw, 0);
+
+  return candidates.find((entry) => `${entry}`.trim() !== '') || '';
+}
+
+function pickName(raw, index) {
+  return pickByAliases(raw, [
+    'name', 'fullname', 'displayname', 'contactname', 'title', 'companyname', 'firmname', 'ime', 'naimenovanie',
+  ]) || `Contact ${index + 1}`;
+}
+
+function pickPhone(raw) {
+  return pickByAliases(raw, [
+    'phone', 'phonenumber', 'number', 'mobile', 'mobilephone', 'telephone', 'tel', 'gsm', 'mainphone', 'contactphone',
+  ]);
+}
+
+function pickPaidPhone(raw) {
+  return pickByAliases(raw, [
+    'paidphone', 'paidnumber', 'paid', 'secondaryphone', 'servicephone', 'pricephone', 'platen', 'platennomer',
+  ]);
+}
+
+function pickLogo(raw) {
+  return pickByAliases(raw, [
+    'logo', 'avatar', 'image', 'photo', 'profileimage', 'img', 'icon', 'picture', 'thumbnail', 'logourl', 'logoimage',
+  ]);
 }
 
 function normalizeContact(raw, index) {
-  const name = pick(raw, ['name', 'fullName', 'displayName', 'contactName']) || `Contact ${index + 1}`;
-  const phone = pick(raw, ['phone', 'phoneNumber', 'number', 'mobile', 'mobilePhone', 'telephone']);
-  const paidPhone = pick(raw, ['paidPhone', 'paid_number', 'paidNumber', 'secondaryPhone', 'paid']);
-  const logoRaw = pick(raw, ['logo', 'avatar', 'image', 'photo', 'profileImage']);
-
   return {
-    name,
-    phone,
-    paidPhone,
-    logo: normalizeLogoUrl(logoRaw),
+    name: pickName(raw, index),
+    phone: pickPhone(raw),
+    paidPhone: pickPaidPhone(raw),
+    logo: normalizeLogoUrl(pickLogo(raw)),
   };
 }
 
@@ -84,191 +135,62 @@ function parseJsonText(text) {
   return JSON.parse(text.replace(/^\uFEFF/, ''));
 }
 
-function decodeLatin1BytesAsUtf8(text) {
-  try {
-    const bytes = Uint8Array.from([...text].map((char) => char.charCodeAt(0) & 0xff));
-    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-  } catch {
-    return text;
-  }
-}
-
-function decodeUtf8BytesAsCp1251(text) {
-  try {
-    const bytes = new TextEncoder().encode(text);
-    return new TextDecoder('windows-1251', { fatal: true }).decode(bytes);
-  } catch {
-    return text;
-  }
-}
-
-function repairTextMojibake(value) {
-  const input = `${value ?? ''}`;
-  const variants = [
-    input,
-    decodeLatin1BytesAsUtf8(input),
-    decodeUtf8BytesAsCp1251(input),
-    decodeLatin1BytesAsUtf8(decodeUtf8BytesAsCp1251(input)),
-    decodeUtf8BytesAsCp1251(decodeLatin1BytesAsUtf8(input)),
-  ];
-
-  return variants.reduce((best, candidate) => (textQuality(candidate) > textQuality(best) ? candidate : best), input);
-}
-
-function deepRepairStrings(value) {
-  if (Array.isArray(value)) {
-    return value.map(deepRepairStrings);
-  }
-
-  if (value && typeof value === 'object') {
-    return Object.fromEntries(Object.entries(value).map(([key, nested]) => [key, deepRepairStrings(nested)]));
-  }
-
-  if (typeof value === 'string') {
-    return repairTextMojibake(value);
-  }
-
-  return value;
-}
-
 function textQuality(text) {
-  const cyrillic = (text.match(/[\u0400-\u04FF]/g) || []).length;
-  const latin = (text.match(/[A-Za-z]/g) || []).length;
-  const digits = (text.match(/[0-9]/g) || []).length;
-  const questions = (text.match(/\?/g) || []).length;
-  const replacement = (text.match(/�/g) || []).length;
-  // Penalize obvious decoding artifacts heavily.
-  return cyrillic * 4 + latin + digits - questions * 3 - replacement * 6;
-}
+  const value = `${text || ''}`;
+  const cyrillic = (value.match(/[\u0400-\u04FF]/g) || []).length;
+  const latin = (value.match(/[A-Za-z]/g) || []).length;
+  const digits = (value.match(/[0-9]/g) || []).length;
+  const replacement = (value.match(/�/g) || []).length;
+  const questions = (value.match(/\?/g) || []).length;
+  const mojibake = (value.match(/[ÐÑÃ]/g) || []).length;
 
-
-function stringScore(value) {
-  return textQuality(`${value || ''}`);
-}
-
-function betterValue(current, candidate) {
-  if (!candidate) return current || '';
-  if (!current) return candidate;
-  return stringScore(candidate) > stringScore(current) ? candidate : current;
-}
-
-function mergeListsByFieldQuality(primaryList, fallbackList) {
-  if (!Array.isArray(primaryList) || !Array.isArray(fallbackList)) return primaryList;
-  if (primaryList.length !== fallbackList.length) return primaryList;
-
-  const merged = [];
-  for (let i = 0; i < primaryList.length; i += 1) {
-    const base = primaryList[i] || {};
-    const alt = fallbackList[i] || {};
-
-    merged.push({
-      ...base,
-      name: betterValue(base.name, alt.name),
-      fullName: betterValue(base.fullName, alt.fullName),
-      displayName: betterValue(base.displayName, alt.displayName),
-      contactName: betterValue(base.contactName, alt.contactName),
-      phone: betterValue(base.phone, alt.phone),
-      phoneNumber: betterValue(base.phoneNumber, alt.phoneNumber),
-      number: betterValue(base.number, alt.number),
-      mobile: betterValue(base.mobile, alt.mobile),
-      paidPhone: betterValue(base.paidPhone, alt.paidPhone),
-      paid_number: betterValue(base.paid_number, alt.paid_number),
-      paidNumber: betterValue(base.paidNumber, alt.paidNumber),
-      logo: betterValue(base.logo, alt.logo),
-      avatar: betterValue(base.avatar, alt.avatar),
-      image: betterValue(base.image, alt.image),
-      photo: betterValue(base.photo, alt.photo),
-      profileImage: betterValue(base.profileImage, alt.profileImage),
-    });
-  }
-
-  return merged;
+  return cyrillic * 5 + latin + digits - replacement * 8 - questions * 4 - mojibake * 3;
 }
 
 function payloadQuality(payload) {
-  const list = asList(payload).slice(0, 40);
+  const list = asList(payload).slice(0, 50);
   if (!list.length) return -100000;
 
   let score = 0;
   for (const item of list) {
-    const name = pick(item, ['name', 'fullName', 'displayName', 'contactName']);
-    const phone = pick(item, ['phone', 'phoneNumber', 'number', 'mobile', 'mobilePhone', 'telephone']);
-    score += textQuality(`${name} ${phone}`);
+    const name = pickName(item, 0);
+    const phone = pickPhone(item);
+    const logo = pickLogo(item);
+    score += textQuality(`${name} ${phone} ${logo}`);
   }
+
   return score;
 }
 
 function tryDecode(buffer, charset) {
-  const text = new TextDecoder(charset).decode(buffer);
-  const parsed = parseJsonText(text);
-  return { parsed, score: payloadQuality(parsed), charset };
+  const decoder = new TextDecoder(charset);
+  const parsed = parseJsonText(decoder.decode(buffer));
+  return { parsed, charset, score: payloadQuality(parsed) };
 }
 
 function decodeJsonPayload(buffer, contentType = '') {
-  const charsetMatch = contentType.match(/charset=([^;]+)/i);
-  const declaredCharset = charsetMatch?.[1]?.trim().toLowerCase();
+  const declaredCharset = contentType.match(/charset=([^;]+)/i)?.[1]?.trim().toLowerCase();
+  const charsets = [declaredCharset, 'utf-8', 'windows-1251', 'koi8-r', 'iso-8859-1'].filter(Boolean);
 
-  const candidates = [];
+  const results = [];
   const seen = new Set();
 
-  function addCandidate(charset) {
-    if (!charset || seen.has(charset)) return;
+  for (const charset of charsets) {
+    if (seen.has(charset)) continue;
     seen.add(charset);
     try {
-      candidates.push(tryDecode(buffer, charset));
+      results.push(tryDecode(buffer, charset));
     } catch {
-      // ignore failed decode/parse candidates
+      // skip decode candidate
     }
   }
 
-  addCandidate(declaredCharset);
-  addCandidate('utf-8');
-  addCandidate('windows-1251');
-  addCandidate('iso-8859-1');
-
-  if (!candidates.length) {
+  if (!results.length) {
     throw new Error('Unable to decode contacts payload as JSON.');
   }
 
-  candidates.sort((a, b) => b.score - a.score);
-  const best = candidates[0];
-
-  const utf8 = candidates.find((c) => c.charset === 'utf-8')?.parsed;
-  const cp1251 = candidates.find((c) => c.charset === 'windows-1251')?.parsed;
-
-  const repairedPayloadCandidates = [
-    deepRepairStrings(best.parsed),
-    ...candidates.map((candidate) => deepRepairStrings(candidate.parsed)),
-  ];
-
-  if (utf8 && cp1251) {
-    const mergedPayload = JSON.parse(JSON.stringify(best.parsed));
-    const baseList = asList(mergedPayload);
-    const utf8List = asList(utf8);
-    const cp1251List = asList(cp1251);
-
-    if (Array.isArray(baseList) && baseList.length) {
-      const altList = best.charset === 'utf-8' ? cp1251List : utf8List;
-      const mergedList = mergeListsByFieldQuality(baseList, altList);
-
-      if (Array.isArray(mergedPayload)) {
-        repairedPayloadCandidates.push(mergedList);
-      } else if (Array.isArray(mergedPayload?.data)) {
-        mergedPayload.data = mergedList;
-        repairedPayloadCandidates.push(mergedPayload);
-      } else if (Array.isArray(mergedPayload?.result)) {
-        mergedPayload.result = mergedList;
-        repairedPayloadCandidates.push(mergedPayload);
-      } else if (Array.isArray(mergedPayload?.contacts)) {
-        mergedPayload.contacts = mergedList;
-        repairedPayloadCandidates.push(mergedPayload);
-      }
-    }
-  }
-
-  return repairedPayloadCandidates
-    .map((payload) => ({ payload, score: payloadQuality(payload) }))
-    .sort((a, b) => b.score - a.score)[0].payload;
+  results.sort((a, b) => b.score - a.score);
+  return results[0].parsed;
 }
 
 function contactRowTemplate(contact) {
@@ -280,7 +202,7 @@ function contactRowTemplate(contact) {
   const safePaidLower = escapeHtml((contact.paidPhone || '').toLowerCase());
 
   const avatar = contact.logo
-    ? `<img class="avatar-image" src="${encodeURI(contact.logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" />`
+    ? `<img class="avatar-image" src="${encodeURI(contact.logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove(); this.parentElement.textContent='${escapeHtml(initials(contact.name))}';" />`
     : `<span>${escapeHtml(initials(contact.name))}</span>`;
 
   const paidPhoneLine = contact.paidPhone
