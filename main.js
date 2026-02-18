@@ -84,6 +84,53 @@ function parseJsonText(text) {
   return JSON.parse(text.replace(/^\uFEFF/, ''));
 }
 
+function decodeLatin1BytesAsUtf8(text) {
+  try {
+    const bytes = Uint8Array.from([...text].map((char) => char.charCodeAt(0) & 0xff));
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    return text;
+  }
+}
+
+function decodeUtf8BytesAsCp1251(text) {
+  try {
+    const bytes = new TextEncoder().encode(text);
+    return new TextDecoder('windows-1251', { fatal: true }).decode(bytes);
+  } catch {
+    return text;
+  }
+}
+
+function repairTextMojibake(value) {
+  const input = `${value ?? ''}`;
+  const variants = [
+    input,
+    decodeLatin1BytesAsUtf8(input),
+    decodeUtf8BytesAsCp1251(input),
+    decodeLatin1BytesAsUtf8(decodeUtf8BytesAsCp1251(input)),
+    decodeUtf8BytesAsCp1251(decodeLatin1BytesAsUtf8(input)),
+  ];
+
+  return variants.reduce((best, candidate) => (textQuality(candidate) > textQuality(best) ? candidate : best), input);
+}
+
+function deepRepairStrings(value) {
+  if (Array.isArray(value)) {
+    return value.map(deepRepairStrings);
+  }
+
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([key, nested]) => [key, deepRepairStrings(nested)]));
+  }
+
+  if (typeof value === 'string') {
+    return repairTextMojibake(value);
+  }
+
+  return value;
+}
+
 function textQuality(text) {
   const cyrillic = (text.match(/[\u0400-\u04FF]/g) || []).length;
   const latin = (text.match(/[A-Za-z]/g) || []).length;
@@ -189,6 +236,11 @@ function decodeJsonPayload(buffer, contentType = '') {
   const utf8 = candidates.find((c) => c.charset === 'utf-8')?.parsed;
   const cp1251 = candidates.find((c) => c.charset === 'windows-1251')?.parsed;
 
+  const repairedPayloadCandidates = [
+    deepRepairStrings(best.parsed),
+    ...candidates.map((candidate) => deepRepairStrings(candidate.parsed)),
+  ];
+
   if (utf8 && cp1251) {
     const mergedPayload = JSON.parse(JSON.stringify(best.parsed));
     const baseList = asList(mergedPayload);
@@ -200,20 +252,23 @@ function decodeJsonPayload(buffer, contentType = '') {
       const mergedList = mergeListsByFieldQuality(baseList, altList);
 
       if (Array.isArray(mergedPayload)) {
-        return mergedList;
-      }
-      if (Array.isArray(mergedPayload?.data)) {
+        repairedPayloadCandidates.push(mergedList);
+      } else if (Array.isArray(mergedPayload?.data)) {
         mergedPayload.data = mergedList;
+        repairedPayloadCandidates.push(mergedPayload);
       } else if (Array.isArray(mergedPayload?.result)) {
         mergedPayload.result = mergedList;
+        repairedPayloadCandidates.push(mergedPayload);
       } else if (Array.isArray(mergedPayload?.contacts)) {
         mergedPayload.contacts = mergedList;
+        repairedPayloadCandidates.push(mergedPayload);
       }
-      return mergedPayload;
     }
   }
 
-  return best.parsed;
+  return repairedPayloadCandidates
+    .map((payload) => ({ payload, score: payloadQuality(payload) }))
+    .sort((a, b) => b.score - a.score)[0].payload;
 }
 
 function contactRowTemplate(contact) {
