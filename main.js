@@ -7,14 +7,13 @@ const statusMessage = document.getElementById('statusMessage');
 let contacts = [];
 
 function escapeHtml(value) {
-  return value
+  return String(value)
     .replaceAll('&', '&amp;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
 }
-
 
 function pick(obj, keys) {
   for (const key of keys) {
@@ -57,10 +56,56 @@ function initials(name) {
     .join('') || '?';
 }
 
+function cyrillicScore(text) {
+  const matches = text.match(/[\u0400-\u04FF]/g);
+  return matches ? matches.length : 0;
+}
+
+function questionMarkScore(text) {
+  const matches = text.match(/\?/g);
+  return matches ? matches.length : 0;
+}
+
+function parseJsonText(text) {
+  return JSON.parse(text.replace(/^\uFEFF/, ''));
+}
+
+function decodeJsonPayload(buffer, contentType = '') {
+  const charsetMatch = contentType.match(/charset=([^;]+)/i);
+  const declaredCharset = charsetMatch?.[1]?.trim().toLowerCase();
+  const decoderCharset = declaredCharset || 'utf-8';
+
+  const utf8Text = new TextDecoder('utf-8').decode(buffer);
+
+  // Use declared charset first when present (common fix for windows-1251 responses).
+  if (declaredCharset && declaredCharset !== 'utf-8') {
+    try {
+      const declaredText = new TextDecoder(decoderCharset).decode(buffer);
+      return parseJsonText(declaredText);
+    } catch {
+      // fall through to heuristic fallback below
+    }
+  }
+
+  // Heuristic fallback for badly declared Cyrillic payloads.
+  try {
+    const cp1251Text = new TextDecoder('windows-1251').decode(buffer);
+    const utf8Quality = cyrillicScore(utf8Text) - questionMarkScore(utf8Text);
+    const cp1251Quality = cyrillicScore(cp1251Text) - questionMarkScore(cp1251Text);
+    const bestText = cp1251Quality > utf8Quality ? cp1251Text : utf8Text;
+    return parseJsonText(bestText);
+  } catch {
+    return parseJsonText(utf8Text);
+  }
+}
+
 function contactRowTemplate(contact) {
   const safeName = escapeHtml(contact.name);
   const safePhone = escapeHtml(contact.phone || 'No phone number');
   const safePaidPhone = escapeHtml(contact.paidPhone || '');
+  const safeNameLower = escapeHtml(contact.name.toLowerCase());
+  const safePhoneLower = escapeHtml((contact.phone || '').toLowerCase());
+  const safePaidLower = escapeHtml((contact.paidPhone || '').toLowerCase());
 
   const avatar = contact.logo
     ? `<img class="avatar-image" src="${encodeURI(contact.logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" />`
@@ -71,7 +116,7 @@ function contactRowTemplate(contact) {
     : '';
 
   return `
-    <li class="call-item" data-name="${escapeHtml(contact.name.toLowerCase())}" data-phone="${escapeHtml((contact.phone || '').toLowerCase())}" data-paid="${escapeHtml((contact.paidPhone || '').toLowerCase())}">
+    <li class="call-item" data-name="${safeNameLower}" data-phone="${safePhoneLower}" data-paid="${safePaidLower}">
       <div class="avatar">${avatar}</div>
       <div class="details">
         <p class="name">${safeName}</p>
@@ -132,7 +177,10 @@ async function loadContacts() {
       throw new Error(`Request failed (${response.status})`);
     }
 
-    const payload = await response.json();
+    const contentType = response.headers.get('content-type') || '';
+    const bytes = await response.arrayBuffer();
+    const payload = decodeJsonPayload(bytes, contentType);
+
     contacts = asList(payload).map(normalizeContact);
     renderContacts(contacts);
   } catch (error) {
