@@ -24,12 +24,17 @@ function asList(payload) {
   return [];
 }
 
+function normalizeKey(value) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9а-я]/gi, '');
+}
+
 function normalizeLogoUrl(logo) {
   const raw = `${logo || ''}`.trim();
   if (!raw) return '';
 
   const srcMatch = raw.match(/src\s*=\s*['\"]([^'\"]+)['\"]/i);
-  const value = (srcMatch?.[1] || raw).trim();
+  const urlMatch = raw.match(/(https?:\/\/[^\s"'>]+|\/logos\/[^\s"'>]+)/i);
+  const value = (srcMatch?.[1] || urlMatch?.[1] || raw).trim();
 
   if (!value) return '';
   if (value.startsWith('//')) return `https:${value}`;
@@ -39,12 +44,57 @@ function normalizeLogoUrl(logo) {
   return value.replace(/^http:\/\//i, 'https://');
 }
 
-function normalizeKey(value) {
-  return String(value || '').toLowerCase().replace(/[^a-z0-9а-я]/gi, '');
+function decodeLatin1BytesAsUtf8(text) {
+  try {
+    const bytes = Uint8Array.from([...text].map((char) => char.charCodeAt(0) & 0xff));
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    return text;
+  }
+}
+
+function decodeUtf8BytesAsCp1251(text) {
+  try {
+    const bytes = new TextEncoder().encode(text);
+    return new TextDecoder('windows-1251', { fatal: true }).decode(bytes);
+  } catch {
+    return text;
+  }
+}
+
+function textQuality(text) {
+  const value = `${text || ''}`;
+  const cyrillic = (value.match(/[\u0400-\u04FF]/g) || []).length;
+  const latin = (value.match(/[A-Za-z]/g) || []).length;
+  const digits = (value.match(/[0-9]/g) || []).length;
+  const spaces = (value.match(/\s/g) || []).length;
+  const replacement = (value.match(/�/g) || []).length;
+  const questions = (value.match(/\?/g) || []).length;
+  const mojibake = (value.match(/[ÐÑÃÂ]/g) || []).length;
+
+  return cyrillic * 6 + latin * 1.2 + digits + spaces * 0.4 - replacement * 10 - questions * 6 - mojibake * 5;
+}
+
+function repairTextMojibake(value) {
+  const input = `${value ?? ''}`.trim();
+  if (!input) return '';
+
+  const variants = [
+    input,
+    decodeLatin1BytesAsUtf8(input),
+    decodeUtf8BytesAsCp1251(input),
+    decodeLatin1BytesAsUtf8(decodeUtf8BytesAsCp1251(input)),
+    decodeUtf8BytesAsCp1251(decodeLatin1BytesAsUtf8(input)),
+  ];
+
+  return variants.reduce((best, candidate) => {
+    return textQuality(candidate) > textQuality(best) ? candidate : best;
+  }, input);
 }
 
 function collectLeafStrings(value, out = []) {
   if (value == null) return out;
+
   if (typeof value === 'string' || typeof value === 'number') {
     const text = `${value}`.trim();
     if (text) out.push(text);
@@ -63,12 +113,13 @@ function collectLeafStrings(value, out = []) {
   return out;
 }
 
-function pickByAliases(raw, aliases) {
-  const aliasSet = new Set(aliases.map(normalizeKey));
+function collectAliasCandidates(raw, aliases) {
+  const aliasKeys = aliases.map(normalizeKey);
   const candidates = [];
 
   function walk(node, depth = 0) {
-    if (!node || typeof node !== 'object' || depth > 3) return;
+    if (!node || typeof node !== 'object' || depth > 4) return;
+
     if (Array.isArray(node)) {
       for (const item of node) walk(item, depth + 1);
       return;
@@ -76,49 +127,108 @@ function pickByAliases(raw, aliases) {
 
     for (const [key, value] of Object.entries(node)) {
       const normalized = normalizeKey(key);
-      if ([...aliasSet].some((alias) => normalized === alias || normalized.includes(alias))) {
-        const values = collectLeafStrings(value);
+      const matched = aliasKeys.some((alias) => normalized === alias || normalized.includes(alias));
+
+      if (matched) {
+        const values = collectLeafStrings(value).map(repairTextMojibake);
         candidates.push(...values);
       }
-      if (value && typeof value === 'object') walk(value, depth + 1);
+
+      if (value && typeof value === 'object') {
+        walk(value, depth + 1);
+      }
     }
   }
 
-  walk(raw, 0);
+  walk(raw);
+  return candidates;
+}
 
-  return candidates.find((entry) => `${entry}`.trim() !== '') || '';
+function bestTextCandidate(candidates, fallback = '') {
+  if (!candidates.length) return fallback;
+
+  const ranked = [...new Set(candidates)]
+    .map((value) => ({ value, score: textQuality(value) }))
+    .sort((a, b) => b.score - a.score);
+
+  return ranked[0]?.value || fallback;
+}
+
+function bestPhoneCandidate(candidates) {
+  const cleaned = [...new Set(candidates)]
+    .map((value) => value.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+
+  if (!cleaned.length) return '';
+
+  cleaned.sort((a, b) => {
+    const aDigits = (a.match(/[0-9]/g) || []).length;
+    const bDigits = (b.match(/[0-9]/g) || []).length;
+    return bDigits - aDigits;
+  });
+
+  return cleaned[0];
+}
+
+function bestLogoCandidate(candidates) {
+  const cleaned = [...new Set(candidates)]
+    .map(normalizeLogoUrl)
+    .filter(Boolean);
+
+  if (!cleaned.length) return '';
+
+  function logoScore(url) {
+    let score = 0;
+    if (url.startsWith('https://')) score += 5;
+    if (/\/logos\//i.test(url)) score += 8;
+    if (/\.(png|jpe?g|webp|gif|svg)(\?|$)/i.test(url)) score += 4;
+    if (/placeholder|default|no-image|nologo/i.test(url)) score -= 6;
+    return score;
+  }
+
+  cleaned.sort((a, b) => logoScore(b) - logoScore(a));
+  return cleaned[0];
 }
 
 function pickName(raw, index) {
-  return pickByAliases(raw, [
+  const name = bestTextCandidate(collectAliasCandidates(raw, [
     'name', 'fullname', 'displayname', 'contactname', 'title', 'companyname', 'firmname', 'ime', 'naimenovanie',
-  ]) || `Contact ${index + 1}`;
+  ]));
+
+  return name || `Contact ${index + 1}`;
 }
 
 function pickPhone(raw) {
-  return pickByAliases(raw, [
+  return bestPhoneCandidate(collectAliasCandidates(raw, [
     'phone', 'phonenumber', 'number', 'mobile', 'mobilephone', 'telephone', 'tel', 'gsm', 'mainphone', 'contactphone',
-  ]);
+  ]));
 }
 
-function pickPaidPhone(raw) {
-  return pickByAliases(raw, [
+function pickPaidPhone(raw, mainPhone) {
+  const paid = bestPhoneCandidate(collectAliasCandidates(raw, [
     'paidphone', 'paidnumber', 'paid', 'secondaryphone', 'servicephone', 'pricephone', 'platen', 'platennomer',
-  ]);
+  ]));
+
+  if (!paid) return '';
+  if (mainPhone && paid.replace(/\D/g, '') === mainPhone.replace(/\D/g, '')) return '';
+  return paid;
 }
 
 function pickLogo(raw) {
-  return pickByAliases(raw, [
+  return bestLogoCandidate(collectAliasCandidates(raw, [
     'logo', 'avatar', 'image', 'photo', 'profileimage', 'img', 'icon', 'picture', 'thumbnail', 'logourl', 'logoimage',
-  ]);
+  ]));
 }
 
 function normalizeContact(raw, index) {
+  const name = pickName(raw, index);
+  const phone = pickPhone(raw);
+
   return {
-    name: pickName(raw, index),
-    phone: pickPhone(raw),
-    paidPhone: pickPaidPhone(raw),
-    logo: normalizeLogoUrl(pickLogo(raw)),
+    name,
+    phone,
+    paidPhone: pickPaidPhone(raw, phone),
+    logo: pickLogo(raw),
   };
 }
 
@@ -135,18 +245,6 @@ function parseJsonText(text) {
   return JSON.parse(text.replace(/^\uFEFF/, ''));
 }
 
-function textQuality(text) {
-  const value = `${text || ''}`;
-  const cyrillic = (value.match(/[\u0400-\u04FF]/g) || []).length;
-  const latin = (value.match(/[A-Za-z]/g) || []).length;
-  const digits = (value.match(/[0-9]/g) || []).length;
-  const replacement = (value.match(/�/g) || []).length;
-  const questions = (value.match(/\?/g) || []).length;
-  const mojibake = (value.match(/[ÐÑÃ]/g) || []).length;
-
-  return cyrillic * 5 + latin + digits - replacement * 8 - questions * 4 - mojibake * 3;
-}
-
 function payloadQuality(payload) {
   const list = asList(payload).slice(0, 50);
   if (!list.length) return -100000;
@@ -155,16 +253,17 @@ function payloadQuality(payload) {
   for (const item of list) {
     const name = pickName(item, 0);
     const phone = pickPhone(item);
+    const paid = pickPaidPhone(item, phone);
     const logo = pickLogo(item);
-    score += textQuality(`${name} ${phone} ${logo}`);
+    score += textQuality(`${name} ${phone} ${paid}`);
+    if (logo) score += 4;
   }
 
   return score;
 }
 
 function tryDecode(buffer, charset) {
-  const decoder = new TextDecoder(charset);
-  const parsed = parseJsonText(decoder.decode(buffer));
+  const parsed = parseJsonText(new TextDecoder(charset).decode(buffer));
   return { parsed, charset, score: payloadQuality(parsed) };
 }
 
@@ -172,25 +271,26 @@ function decodeJsonPayload(buffer, contentType = '') {
   const declaredCharset = contentType.match(/charset=([^;]+)/i)?.[1]?.trim().toLowerCase();
   const charsets = [declaredCharset, 'utf-8', 'windows-1251', 'koi8-r', 'iso-8859-1'].filter(Boolean);
 
-  const results = [];
+  const attempts = [];
   const seen = new Set();
 
   for (const charset of charsets) {
     if (seen.has(charset)) continue;
     seen.add(charset);
+
     try {
-      results.push(tryDecode(buffer, charset));
+      attempts.push(tryDecode(buffer, charset));
     } catch {
-      // skip decode candidate
+      // skip unsupported/invalid decode candidate
     }
   }
 
-  if (!results.length) {
+  if (!attempts.length) {
     throw new Error('Unable to decode contacts payload as JSON.');
   }
 
-  results.sort((a, b) => b.score - a.score);
-  return results[0].parsed;
+  attempts.sort((a, b) => b.score - a.score);
+  return attempts[0].parsed;
 }
 
 function contactRowTemplate(contact) {
@@ -264,15 +364,17 @@ async function loadContacts() {
   try {
     const response = await fetch(API_URL, {
       method: 'GET',
-      headers: { Accept: 'application/json' },
+      headers: {
+        Accept: 'application/json, text/plain, */*',
+      },
     });
 
     if (!response.ok) {
       throw new Error(`Request failed (${response.status})`);
     }
 
-    const contentType = response.headers.get('content-type') || '';
     const bytes = await response.arrayBuffer();
+    const contentType = response.headers.get('content-type') || '';
     const payload = decodeJsonPayload(bytes, contentType);
 
     contacts = asList(payload).map(normalizeContact);
