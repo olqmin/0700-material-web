@@ -8,6 +8,10 @@
   --md-filled-text-field-container-color: #171717;
   --md-filled-text-field-input-text-color: #f3f3f3;
   --md-filled-text-field-label-text-color: #c2c2c2;
+  --md-filled-text-field-active-indicator-color: transparent;
+  --md-filled-text-field-focus-active-indicator-color: transparent;
+  --md-filled-text-field-active-indicator-height: 0;
+  --md-filled-text-field-focus-active-indicator-height: 0;
 }
 
 * {
@@ -39,12 +43,6 @@ body {
   width: 100%;
 }
 
-.section-title {
-  font-size: 2rem;
-  line-height: 2.5rem;
-  margin: 0 8px 14px;
-  font-weight: 700;
-}
 
 .call-list {
   list-style: none;
@@ -165,7 +163,6 @@ body {
     width: 100%;
   }
 
-  .section-title { font-size: 1.8rem; }
   .details .name { font-size: 1.75rem; }
   .details .meta { font-size: 1.4rem; }
 }
