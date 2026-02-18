@@ -1,6 +1,5 @@
 const searchInput = document.getElementById('searchInput');
 const callItems = Array.from(document.querySelectorAll('.call-item'));
-const navItems = Array.from(document.querySelectorAll('.nav-item'));
 
 function filterCalls(query) {
   const normalized = query.trim().toLowerCase();
@@ -14,17 +13,7 @@ function filterCalls(query) {
 }
 
 searchInput?.addEventListener('input', (event) => {
-  filterCalls(event.target.value || '');
+  const inputEl = event.target;
+  const value = inputEl?.value || '';
+  filterCalls(value);
 });
-
-for (const navItem of navItems) {
-  navItem.addEventListener('click', () => {
-    for (const item of navItems) {
-      item.classList.remove('active');
-      item.removeAttribute('aria-current');
-    }
-
-    navItem.classList.add('active');
-    navItem.setAttribute('aria-current', 'page');
-  });
-}

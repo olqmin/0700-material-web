@@ -1,13 +1,13 @@
 :root {
-  --md-sys-color-background: #1f1612;
-  --md-sys-color-surface: #2a1f1a;
-  --md-sys-color-surface-container: #352824;
-  --md-sys-color-primary: #d8bca9;
-  --md-sys-color-on-surface: #efe1d8;
-  --md-sys-color-on-surface-variant: #c9b5a8;
+  --md-sys-color-background: #000000;
+  --md-sys-color-surface: #0d0d0d;
+  --md-sys-color-surface-container: #161616;
+  --md-sys-color-on-surface: #f3f3f3;
+  --md-sys-color-on-surface-variant: #b4b4b4;
   --md-filled-text-field-container-shape: 28px;
-  --md-filled-text-field-container-color: #332722;
-  --md-icon-button-icon-color: #e9d9cc;
+  --md-filled-text-field-container-color: #171717;
+  --md-filled-text-field-input-text-color: #f3f3f3;
+  --md-filled-text-field-label-text-color: #c2c2c2;
 }
 
 * {
@@ -19,20 +19,20 @@ body {
   min-height: 100vh;
   display: grid;
   place-items: center;
-  background: radial-gradient(circle at top, #2f211b 0%, #1b1411 60%);
+  background: #000;
   font-family: Roboto, Arial, sans-serif;
   color: var(--md-sys-color-on-surface);
 }
 
 .app-shell {
-  width: min(100%, 390px);
-  min-height: 844px;
-  padding: 22px 16px 20px;
+  width: min(100%, 460px);
+  min-height: 100vh;
+  padding: 24px 18px 20px;
   background: var(--md-sys-color-background);
 }
 
 .top-app-bar {
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 #searchInput {
@@ -43,7 +43,7 @@ body {
   font-size: 2rem;
   line-height: 2.5rem;
   margin: 0 8px 14px;
-  font-weight: 500;
+  font-weight: 700;
 }
 
 .call-list {
@@ -51,17 +51,17 @@ body {
   padding: 0;
   margin: 0;
   display: grid;
-  gap: 2px;
+  gap: 8px;
 }
 
 .call-item {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 14px;
   align-items: center;
-  padding: 14px 14px;
+  padding: 14px;
   background: var(--md-sys-color-surface-container);
-  border-radius: 16px;
+  border-radius: 18px;
 }
 
 .avatar {
@@ -72,8 +72,8 @@ body {
   place-items: center;
   font-size: 2rem;
   font-weight: 500;
-  color: #f6f0ea;
-  background: #5b2f1f;
+  color: #f3f3f3;
+  background: #3f3f3f;
 }
 
 .avatar.photo {
@@ -84,15 +84,20 @@ body {
 .avatar.purple { background: #5c2ec7; }
 .avatar.orange { background: #9c4e00; }
 .avatar.muted {
-  background: #3d2f28;
+  background: #2c2c2c;
   font-size: 1.6rem;
+}
+
+.details {
+  min-width: 0;
 }
 
 .details .name {
   margin: 0 0 3px;
-  font-size: 2rem;
-  line-height: 2.4rem;
+  font-size: 2.05rem;
+  line-height: 1.2;
   letter-spacing: 0.01em;
+  overflow-wrap: anywhere;
 }
 
 .details .meta {
@@ -101,61 +106,54 @@ body {
   align-items: center;
   gap: 4px;
   color: var(--md-sys-color-on-surface-variant);
-  font-size: 1.85rem;
-  line-height: 2.2rem;
+  font-size: 1.72rem;
+  line-height: 1.25;
 }
 
 .badge {
-  font-size: 1.25rem;
-  color: #bcb0a6;
+  font-size: 1.2rem;
+  color: #bdbdbd;
+  white-space: nowrap;
 }
 
 .material-symbols-rounded {
+  font-family: 'Material Symbols Rounded';
+  font-weight: normal;
+  font-style: normal;
   font-size: 1.25em;
-  vertical-align: middle;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
 }
 
-.bottom-nav {
-  margin-top: 18px;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  padding: 8px 4px 0;
-}
-
-.nav-item {
-  min-height: 64px;
+.icon-action {
+  width: 40px;
+  height: 40px;
   border: none;
+  border-radius: 999px;
   background: transparent;
-  color: var(--md-sys-color-on-surface-variant);
-  border-radius: 32px;
+  color: #e7e7e7;
   display: grid;
-  gap: 2px;
   place-items: center;
-  font: inherit;
   cursor: pointer;
 }
 
-.nav-item.active {
-  color: var(--md-sys-color-on-surface);
-  background: #624734;
+.icon-action:hover {
+  background: #232323;
 }
 
-.nav-item .material-symbols-rounded {
-  font-size: 1.7rem;
-}
-
-.nav-item span:last-child {
-  font-size: 1.25rem;
-}
-
-@media (max-width: 420px) {
+@media (max-width: 480px) {
   .app-shell {
     width: 100%;
-    min-height: 100vh;
   }
 
-  .section-title { font-size: 1.75rem; }
-  .details .name { font-size: 1.85rem; }
-  .details .meta { font-size: 1.45rem; }
+  .section-title { font-size: 1.8rem; }
+  .details .name { font-size: 1.75rem; }
+  .details .meta { font-size: 1.4rem; }
 }

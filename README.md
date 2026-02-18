@@ -1,17 +1,20 @@
 # Material Dialer-style Static UI
 
-A static Material Web starter inspired by Google Dialer. It runs on shared hosting with only:
+A static Material Web dialer-style interface for shared hosting.
+
+## Files
 
 - `index.html`
 - `styles.css`
 - `main.js`
 
-## Features
+## What's included
 
-- Material Web components and tokens
-- Dialer-style dark UI with contact history cards
-- Search field with client-side filtering
-- Bottom navigation state toggle (Home / Keypad)
+- Pure black theme
+- Wider app layout for desktop preview
+- Material search field with working icon fonts
+- Call history list cards with call action icons
+- Client-side search filtering in plain JavaScript
 
 ## Run locally
 
@@ -23,10 +26,10 @@ Then open <http://localhost:8080>.
 
 ## Deploy
 
-Upload these files to your hosting public directory (e.g. `public_html/`).
+Upload all files to your hosting public directory (for example `public_html/`).
 
 ## Open directly from file system
 
-You can open `index.html` directly (double-click). `main.js` is loaded as a deferred classic script for `file://` compatibility.
+You can open `index.html` directly (double-click). `main.js` is a deferred classic script for `file://` compatibility.
 
-> Note: Material Web and fonts are loaded from CDNs. Ensure client browsers can access those domains.
+> Note: Material Web and Google Fonts are loaded from CDNs, so client browsers need internet access to those domains.

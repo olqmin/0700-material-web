@@ -4,9 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Material Dialer UI</title>
-    <meta name="description" content="Google Dialer inspired UI built with Material Web and static assets." />
+    <meta name="description" content="Dialer-inspired UI built with Material Web and static assets." />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,500,0,0" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:FILL@0" />
     <link rel="stylesheet" href="styles.css" />
 
     <script type="module" src="https://esm.run/@material/web/all.js"></script>
@@ -23,8 +23,8 @@
           has-trailing-icon
           aria-label="Search contacts"
         >
-          <md-icon slot="leading-icon">menu</md-icon>
-          <md-icon slot="trailing-icon">mic</md-icon>
+          <span class="material-symbols-rounded" slot="leading-icon" aria-hidden="true">menu</span>
+          <span class="material-symbols-rounded" slot="trailing-icon" aria-hidden="true">mic</span>
         </md-filled-text-field>
       </header>
 
@@ -38,7 +38,7 @@
               <p class="name">Daniel Georgiev</p>
               <p class="meta"><span class="material-symbols-rounded">north_east</span> Mobile • Tue 21:05</p>
             </div>
-            <md-icon-button aria-label="Call Daniel Georgiev"><md-icon>call</md-icon></md-icon-button>
+            <button class="icon-action" aria-label="Call Daniel Georgiev"><span class="material-symbols-rounded">call</span></button>
           </li>
 
           <li class="call-item" data-name="Katya Valcheva" data-meta="Mobile Tue 18:57">
@@ -47,7 +47,7 @@
               <p class="name">Katya Valcheva <span class="badge">HD (2)</span></p>
               <p class="meta"><span class="material-symbols-rounded">south_west</span> Mobile • Tue 18:57</p>
             </div>
-            <md-icon-button aria-label="Call Katya Valcheva"><md-icon>call</md-icon></md-icon-button>
+            <button class="icon-action" aria-label="Call Katya Valcheva"><span class="material-symbols-rounded">call</span></button>
           </li>
 
           <li class="call-item" data-name="Georgi Dimitrov" data-meta="Mobile Tue 17:53">
@@ -56,7 +56,7 @@
               <p class="name">Georgi Dimitrov <span class="badge">HD</span></p>
               <p class="meta"><span class="material-symbols-rounded">south_west</span> Mobile • Tue 17:53</p>
             </div>
-            <md-icon-button aria-label="Call Georgi Dimitrov"><md-icon>call</md-icon></md-icon-button>
+            <button class="icon-action" aria-label="Call Georgi Dimitrov"><span class="material-symbols-rounded">call</span></button>
           </li>
 
           <li class="call-item" data-name="Vladimir Olegov" data-meta="Mobile Tue 16:21">
@@ -65,7 +65,7 @@
               <p class="name">Vladimir Olegov</p>
               <p class="meta"><span class="material-symbols-rounded">south_west</span> Mobile • Tue 16:21</p>
             </div>
-            <md-icon-button aria-label="Call Vladimir Olegov"><md-icon>call</md-icon></md-icon-button>
+            <button class="icon-action" aria-label="Call Vladimir Olegov"><span class="material-symbols-rounded">call</span></button>
           </li>
 
           <li class="call-item" data-name="02 808 2007" data-meta="Sofia Tue 15:25">
@@ -74,21 +74,10 @@
               <p class="name">02 808 2007 <span class="badge">HD (2)</span></p>
               <p class="meta"><span class="material-symbols-rounded">north_east</span> Sofia • Tue 15:25</p>
             </div>
-            <md-icon-button aria-label="Call 02 808 2007"><md-icon>call</md-icon></md-icon-button>
+            <button class="icon-action" aria-label="Call 02 808 2007"><span class="material-symbols-rounded">call</span></button>
           </li>
         </ul>
       </section>
-
-      <nav class="bottom-nav" aria-label="Primary">
-        <button class="nav-item active" data-tab="home" aria-current="page">
-          <span class="material-symbols-rounded">home</span>
-          <span>Home</span>
-        </button>
-        <button class="nav-item" data-tab="keypad">
-          <span class="material-symbols-rounded">dialpad</span>
-          <span>Keypad</span>
-        </button>
-      </nav>
     </main>
   </body>
 </html>
