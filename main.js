@@ -1,4 +1,5 @@
 const API_URL = 'https://admin.0700bezplatnite.com/0700backend/contact/getIOSContacts';
+const LOGO_BASE_URL = 'https://admin.0700bezplatnite.com';
 
 const searchInput = document.getElementById('searchInput');
 const callList = document.getElementById('callList');
@@ -33,17 +34,40 @@ function asList(payload) {
   return [];
 }
 
+function normalizeLogoUrl(logo) {
+  const value = `${logo || ''}`.trim();
+  if (!value) return '';
+
+  if (value.startsWith('//')) {
+    return `https:${value}`;
+  }
+
+  if (value.startsWith('http://')) {
+    return `https://${value.slice('http://'.length)}`;
+  }
+
+  if (value.startsWith('/')) {
+    return `${LOGO_BASE_URL}${value}`;
+  }
+
+  if (!/^https?:\/\//i.test(value)) {
+    return `${LOGO_BASE_URL}/${value.replace(/^\/+/, '')}`;
+  }
+
+  return value;
+}
+
 function normalizeContact(raw, index) {
   const name = pick(raw, ['name', 'fullName', 'displayName', 'contactName']) || `Contact ${index + 1}`;
   const phone = pick(raw, ['phone', 'phoneNumber', 'number', 'mobile', 'mobilePhone', 'telephone']);
   const paidPhone = pick(raw, ['paidPhone', 'paid_number', 'paidNumber', 'secondaryPhone', 'paid']);
-  const logo = pick(raw, ['logo', 'avatar', 'image', 'photo', 'profileImage']);
+  const logoRaw = pick(raw, ['logo', 'avatar', 'image', 'photo', 'profileImage']);
 
   return {
     name,
     phone,
     paidPhone,
-    logo,
+    logo: normalizeLogoUrl(logoRaw),
   };
 }
 
@@ -56,47 +80,67 @@ function initials(name) {
     .join('') || '?';
 }
 
-function cyrillicScore(text) {
-  const matches = text.match(/[\u0400-\u04FF]/g);
-  return matches ? matches.length : 0;
-}
-
-function questionMarkScore(text) {
-  const matches = text.match(/\?/g);
-  return matches ? matches.length : 0;
-}
-
 function parseJsonText(text) {
   return JSON.parse(text.replace(/^\uFEFF/, ''));
+}
+
+function textQuality(text) {
+  const cyrillic = (text.match(/[\u0400-\u04FF]/g) || []).length;
+  const latin = (text.match(/[A-Za-z]/g) || []).length;
+  const digits = (text.match(/[0-9]/g) || []).length;
+  const questions = (text.match(/\?/g) || []).length;
+  const replacement = (text.match(/�/g) || []).length;
+  // Penalize obvious decoding artifacts heavily.
+  return cyrillic * 4 + latin + digits - questions * 3 - replacement * 6;
+}
+
+function payloadQuality(payload) {
+  const list = asList(payload).slice(0, 40);
+  if (!list.length) return -100000;
+
+  let score = 0;
+  for (const item of list) {
+    const name = pick(item, ['name', 'fullName', 'displayName', 'contactName']);
+    const phone = pick(item, ['phone', 'phoneNumber', 'number', 'mobile', 'mobilePhone', 'telephone']);
+    score += textQuality(`${name} ${phone}`);
+  }
+  return score;
+}
+
+function tryDecode(buffer, charset) {
+  const text = new TextDecoder(charset).decode(buffer);
+  const parsed = parseJsonText(text);
+  return { parsed, score: payloadQuality(parsed), charset };
 }
 
 function decodeJsonPayload(buffer, contentType = '') {
   const charsetMatch = contentType.match(/charset=([^;]+)/i);
   const declaredCharset = charsetMatch?.[1]?.trim().toLowerCase();
-  const decoderCharset = declaredCharset || 'utf-8';
 
-  const utf8Text = new TextDecoder('utf-8').decode(buffer);
+  const candidates = [];
+  const seen = new Set();
 
-  // Use declared charset first when present (common fix for windows-1251 responses).
-  if (declaredCharset && declaredCharset !== 'utf-8') {
+  function addCandidate(charset) {
+    if (!charset || seen.has(charset)) return;
+    seen.add(charset);
     try {
-      const declaredText = new TextDecoder(decoderCharset).decode(buffer);
-      return parseJsonText(declaredText);
+      candidates.push(tryDecode(buffer, charset));
     } catch {
-      // fall through to heuristic fallback below
+      // ignore failed decode/parse candidates
     }
   }
 
-  // Heuristic fallback for badly declared Cyrillic payloads.
-  try {
-    const cp1251Text = new TextDecoder('windows-1251').decode(buffer);
-    const utf8Quality = cyrillicScore(utf8Text) - questionMarkScore(utf8Text);
-    const cp1251Quality = cyrillicScore(cp1251Text) - questionMarkScore(cp1251Text);
-    const bestText = cp1251Quality > utf8Quality ? cp1251Text : utf8Text;
-    return parseJsonText(bestText);
-  } catch {
-    return parseJsonText(utf8Text);
+  addCandidate(declaredCharset);
+  addCandidate('utf-8');
+  addCandidate('windows-1251');
+  addCandidate('iso-8859-1');
+
+  if (!candidates.length) {
+    throw new Error('Unable to decode contacts payload as JSON.');
   }
+
+  candidates.sort((a, b) => b.score - a.score);
+  return candidates[0].parsed;
 }
 
 function contactRowTemplate(contact) {

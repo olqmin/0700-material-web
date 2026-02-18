@@ -81,6 +81,7 @@ body {
   font-weight: 500;
   color: #f3f3f3;
   background: #3f3f3f;
+  overflow: hidden;
 }
 
 .avatar.photo {
