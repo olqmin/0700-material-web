@@ -180,19 +180,6 @@ function bestLogoCandidate(candidates) {
   return cleaned[0];
 }
 
-function looksBrokenName(name) {
-  const value = `${name || ''}`.trim();
-  if (!value) return true;
-  const q = (value.match(/\?/g) || []).length;
-  return q >= 3 || q / Math.max(value.length, 1) > 0.18;
-}
-
-function normalizeAliasText(aliases) {
-  const value = `${aliases || ''}`.trim();
-  if (!value) return '';
-  return value.replace(/^\[/, '').replace(/\]$/, '').split(' ??????')[0].trim();
-}
-
 function fallbackLogoFromWebsite(website) {
   const raw = `${website || ''}`.trim();
   if (!raw) return '';
@@ -207,9 +194,7 @@ function pickName(raw, index) {
     'name', 'fullname', 'displayname', 'contactname', 'title', 'companyname', 'firmname', 'ime', 'naimenovanie',
   ]));
 
-  const aliasesText = normalizeAliasText(bestTextCandidate(collectAliasCandidates(raw, ['aliases', 'keywords'])));
-  if (looksBrokenName(name) && aliasesText) return aliasesText;
-  return name || aliasesText || `Contact ${index + 1}`;
+  return name || `Contact ${index + 1}`;
 }
 
 function pickPhone(raw) {
