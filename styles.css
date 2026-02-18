@@ -12,6 +12,8 @@
   --md-filled-text-field-focus-active-indicator-color: transparent;
   --md-filled-text-field-active-indicator-height: 0;
   --md-filled-text-field-focus-active-indicator-height: 0;
+  --md-filled-text-field-hover-active-indicator-color: transparent;
+  --md-filled-text-field-hover-active-indicator-height: 0;
 }
 
 * {
@@ -165,4 +167,12 @@ body {
 
   .details .name { font-size: 1.75rem; }
   .details .meta { font-size: 1.4rem; }
+}
+
+#searchInput::part(active-indicator),
+#searchInput::part(focus-active-indicator),
+#searchInput::part(hover-active-indicator) {
+  opacity: 0 !important;
+  height: 0 !important;
+  border: 0 !important;
 }
