@@ -132,9 +132,17 @@ body {
   font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
 }
 
+.top-app-bar .material-symbols-rounded {
+  font-size: 2rem;
+}
+
+.details .meta .material-symbols-rounded {
+  font-size: 1.6em;
+}
+
 .icon-action {
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   border: none;
   border-radius: 999px;
   background: transparent;
@@ -142,6 +150,10 @@ body {
   display: grid;
   place-items: center;
   cursor: pointer;
+}
+
+.icon-action .material-symbols-rounded {
+  font-size: 2rem;
 }
 
 .icon-action:hover {
