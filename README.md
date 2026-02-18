@@ -12,9 +12,18 @@ A static Material Web dialer-style interface for shared hosting.
 
 - Pure black theme
 - Wider app layout for desktop preview
-- Material search field with working icon fonts
-- Call history list cards with call action icons
+- Material search field without underline
+- Contacts rendered dynamically from API JSON
+- Displays contact logo, name, phone number, and paid phone (if present)
 - Client-side search filtering in plain JavaScript
+
+## API source
+
+The app fetches contacts from:
+
+`https://admin.0700bezplatnite.com/0700backend/contact/getIOSContacts`
+
+The renderer is tolerant to common key variations (`name`, `phone`, `paidPhone`, `logo`, etc.).
 
 ## Run locally
 

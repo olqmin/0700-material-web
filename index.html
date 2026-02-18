@@ -26,52 +26,8 @@
       </header>
 
       <section class="history" aria-label="Call history">
-        <ul class="call-list" id="callList">
-          <li class="call-item" data-name="Daniel Georgiev" data-meta="Mobile Tue 21:05">
-            <div class="avatar photo"></div>
-            <div class="details">
-              <p class="name">Daniel Georgiev</p>
-              <p class="meta"><span class="material-symbols-rounded">north_east</span> Mobile • Tue 21:05</p>
-            </div>
-            <button class="icon-action" aria-label="Call Daniel Georgiev"><span class="material-symbols-rounded">call</span></button>
-          </li>
-
-          <li class="call-item" data-name="Katya Valcheva" data-meta="Mobile Tue 18:57">
-            <div class="avatar green">K</div>
-            <div class="details">
-              <p class="name">Katya Valcheva <span class="badge">HD (2)</span></p>
-              <p class="meta"><span class="material-symbols-rounded">south_west</span> Mobile • Tue 18:57</p>
-            </div>
-            <button class="icon-action" aria-label="Call Katya Valcheva"><span class="material-symbols-rounded">call</span></button>
-          </li>
-
-          <li class="call-item" data-name="Georgi Dimitrov" data-meta="Mobile Tue 17:53">
-            <div class="avatar purple">G</div>
-            <div class="details">
-              <p class="name">Georgi Dimitrov <span class="badge">HD</span></p>
-              <p class="meta"><span class="material-symbols-rounded">south_west</span> Mobile • Tue 17:53</p>
-            </div>
-            <button class="icon-action" aria-label="Call Georgi Dimitrov"><span class="material-symbols-rounded">call</span></button>
-          </li>
-
-          <li class="call-item" data-name="Vladimir Olegov" data-meta="Mobile Tue 16:21">
-            <div class="avatar orange">V</div>
-            <div class="details">
-              <p class="name">Vladimir Olegov</p>
-              <p class="meta"><span class="material-symbols-rounded">south_west</span> Mobile • Tue 16:21</p>
-            </div>
-            <button class="icon-action" aria-label="Call Vladimir Olegov"><span class="material-symbols-rounded">call</span></button>
-          </li>
-
-          <li class="call-item" data-name="02 808 2007" data-meta="Sofia Tue 15:25">
-            <div class="avatar muted"><span class="material-symbols-rounded">person</span></div>
-            <div class="details">
-              <p class="name">02 808 2007 <span class="badge">HD (2)</span></p>
-              <p class="meta"><span class="material-symbols-rounded">north_east</span> Sofia • Tue 15:25</p>
-            </div>
-            <button class="icon-action" aria-label="Call 02 808 2007"><span class="material-symbols-rounded">call</span></button>
-          </li>
-        </ul>
+        <p id="statusMessage" class="status-message" role="status">Loading contacts…</p>
+        <ul class="call-list" id="callList" aria-live="polite"></ul>
       </section>
     </main>
   </body>
