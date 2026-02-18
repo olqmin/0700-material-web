@@ -94,6 +94,50 @@ function textQuality(text) {
   return cyrillic * 4 + latin + digits - questions * 3 - replacement * 6;
 }
 
+
+function stringScore(value) {
+  return textQuality(`${value || ''}`);
+}
+
+function betterValue(current, candidate) {
+  if (!candidate) return current || '';
+  if (!current) return candidate;
+  return stringScore(candidate) > stringScore(current) ? candidate : current;
+}
+
+function mergeListsByFieldQuality(primaryList, fallbackList) {
+  if (!Array.isArray(primaryList) || !Array.isArray(fallbackList)) return primaryList;
+  if (primaryList.length !== fallbackList.length) return primaryList;
+
+  const merged = [];
+  for (let i = 0; i < primaryList.length; i += 1) {
+    const base = primaryList[i] || {};
+    const alt = fallbackList[i] || {};
+
+    merged.push({
+      ...base,
+      name: betterValue(base.name, alt.name),
+      fullName: betterValue(base.fullName, alt.fullName),
+      displayName: betterValue(base.displayName, alt.displayName),
+      contactName: betterValue(base.contactName, alt.contactName),
+      phone: betterValue(base.phone, alt.phone),
+      phoneNumber: betterValue(base.phoneNumber, alt.phoneNumber),
+      number: betterValue(base.number, alt.number),
+      mobile: betterValue(base.mobile, alt.mobile),
+      paidPhone: betterValue(base.paidPhone, alt.paidPhone),
+      paid_number: betterValue(base.paid_number, alt.paid_number),
+      paidNumber: betterValue(base.paidNumber, alt.paidNumber),
+      logo: betterValue(base.logo, alt.logo),
+      avatar: betterValue(base.avatar, alt.avatar),
+      image: betterValue(base.image, alt.image),
+      photo: betterValue(base.photo, alt.photo),
+      profileImage: betterValue(base.profileImage, alt.profileImage),
+    });
+  }
+
+  return merged;
+}
+
 function payloadQuality(payload) {
   const list = asList(payload).slice(0, 40);
   if (!list.length) return -100000;
@@ -140,7 +184,36 @@ function decodeJsonPayload(buffer, contentType = '') {
   }
 
   candidates.sort((a, b) => b.score - a.score);
-  return candidates[0].parsed;
+  const best = candidates[0];
+
+  const utf8 = candidates.find((c) => c.charset === 'utf-8')?.parsed;
+  const cp1251 = candidates.find((c) => c.charset === 'windows-1251')?.parsed;
+
+  if (utf8 && cp1251) {
+    const mergedPayload = JSON.parse(JSON.stringify(best.parsed));
+    const baseList = asList(mergedPayload);
+    const utf8List = asList(utf8);
+    const cp1251List = asList(cp1251);
+
+    if (Array.isArray(baseList) && baseList.length) {
+      const altList = best.charset === 'utf-8' ? cp1251List : utf8List;
+      const mergedList = mergeListsByFieldQuality(baseList, altList);
+
+      if (Array.isArray(mergedPayload)) {
+        return mergedList;
+      }
+      if (Array.isArray(mergedPayload?.data)) {
+        mergedPayload.data = mergedList;
+      } else if (Array.isArray(mergedPayload?.result)) {
+        mergedPayload.result = mergedList;
+      } else if (Array.isArray(mergedPayload?.contacts)) {
+        mergedPayload.contacts = mergedList;
+      }
+      return mergedPayload;
+    }
+  }
+
+  return best.parsed;
 }
 
 function contactRowTemplate(contact) {
