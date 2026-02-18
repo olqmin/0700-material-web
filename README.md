@@ -1,10 +1,17 @@
-# Material Web Static Starter
+# Material Dialer-style Static UI
 
-A minimal **Material Web** starter that works on shared hosting using only:
+A static Material Web starter inspired by Google Dialer. It runs on shared hosting with only:
 
 - `index.html`
 - `styles.css`
 - `main.js`
+
+## Features
+
+- Material Web components and tokens
+- Dialer-style dark UI with contact history cards
+- Search field with client-side filtering
+- Bottom navigation state toggle (Home / Keypad)
 
 ## Run locally
 
@@ -16,11 +23,10 @@ Then open <http://localhost:8080>.
 
 ## Deploy
 
-Upload these files to your hosting public directory (for example `public_html/`).
-
-> Note: Material Web modules are loaded from a CDN (`esm.run`). Make sure your hosting allows client access to external CDNs.
-
+Upload these files to your hosting public directory (e.g. `public_html/`).
 
 ## Open directly from file system
 
-You can also open `index.html` directly (double-click) without a local server.
+You can open `index.html` directly (double-click). `main.js` is loaded as a deferred classic script for `file://` compatibility.
+
+> Note: Material Web and fonts are loaded from CDNs. Ensure client browsers can access those domains.

@@ -1,22 +1,30 @@
-const root = document.documentElement;
-const nameInput = document.getElementById('nameInput');
-const greetBtn = document.getElementById('greetBtn');
-const toggleThemeBtn = document.getElementById('toggleThemeBtn');
-const message = document.getElementById('message');
+const searchInput = document.getElementById('searchInput');
+const callItems = Array.from(document.querySelectorAll('.call-item'));
+const navItems = Array.from(document.querySelectorAll('.nav-item'));
 
-const storedTheme = localStorage.getItem('theme');
-if (storedTheme === 'dark') {
-  root.classList.add('dark');
+function filterCalls(query) {
+  const normalized = query.trim().toLowerCase();
+
+  for (const item of callItems) {
+    const name = (item.dataset.name || '').toLowerCase();
+    const meta = (item.dataset.meta || '').toLowerCase();
+    const visible = !normalized || name.includes(normalized) || meta.includes(normalized);
+    item.hidden = !visible;
+  }
 }
 
-greetBtn?.addEventListener('click', () => {
-  const name = (nameInput?.value || '').trim();
-  message.textContent = name
-    ? `Welcome, ${name}! Your Material Web starter is ready.`
-    : 'Please type your name first.';
+searchInput?.addEventListener('input', (event) => {
+  filterCalls(event.target.value || '');
 });
 
-toggleThemeBtn?.addEventListener('click', () => {
-  root.classList.toggle('dark');
-  localStorage.setItem('theme', root.classList.contains('dark') ? 'dark' : 'light');
-});
+for (const navItem of navItems) {
+  navItem.addEventListener('click', () => {
+    for (const item of navItems) {
+      item.classList.remove('active');
+      item.removeAttribute('aria-current');
+    }
+
+    navItem.classList.add('active');
+    navItem.setAttribute('aria-current', 'page');
+  });
+}
