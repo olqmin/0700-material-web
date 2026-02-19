@@ -25,6 +25,8 @@ The app fetches contacts from:
 
 The renderer is tolerant to common key variations (`name`, `phone`, `paidPhone`, `logo`, etc.).
 
+The client requests JSON with UTF-8 preference via `Accept: application/json` and `Accept-Charset: utf-8`.
+
 ## Run locally
 
 ```bash

@@ -188,6 +188,7 @@ async function loadContacts() {
       method: 'GET',
       headers: {
         Accept: 'application/json',
+        'Accept-Charset': 'utf-8',
       },
     });
 
