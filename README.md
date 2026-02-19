@@ -25,7 +25,7 @@ The app fetches contacts from:
 
 The renderer is tolerant to common key variations (`name`, `phone`, `paidPhone`, `logo`, etc.).
 
-The client requests JSON with UTF-8 preference via `Accept: application/json` and `Accept-Charset: utf-8`.
+The client now uses a permissive `Accept: */*` request header to mirror the successful mobile/browser request profile.
 
 ## Run locally
 
@@ -60,4 +60,3 @@ AddDefaultCharset Off
 ```
 
 Or in app code, set response content type explicitly to `application/json` without a charset suffix.
-

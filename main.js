@@ -187,8 +187,7 @@ async function loadContacts() {
     const response = await fetch(API_URL, {
       method: 'GET',
       headers: {
-        Accept: 'application/json',
-        'Accept-Charset': 'utf-8',
+        Accept: '*/*',
       },
     });
 
