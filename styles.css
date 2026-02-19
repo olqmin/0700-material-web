@@ -9,6 +9,8 @@
   --md-filled-text-field-container-color: #efefef;
   --md-filled-text-field-input-text-color: #101010;
   --md-filled-text-field-label-text-color: #555555;
+  --md-filled-text-field-input-text-size: 16px;
+  --md-filled-text-field-label-text-size: 16px;
   --md-filled-text-field-active-indicator-color: transparent;
   --md-filled-text-field-focus-active-indicator-color: transparent;
   --md-filled-text-field-active-indicator-height: 0;
@@ -93,6 +95,12 @@ body {
   width: 100%;
   max-width: 100%;
   min-width: 0;
+  font-size: 16px;
+}
+
+#searchInput::part(input),
+#searchInput::part(label) {
+  font-size: 16px;
 }
 
 
