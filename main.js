@@ -76,6 +76,73 @@ function parseJsonText(text) {
   return JSON.parse(text.replace(/^\uFEFF/, ''));
 }
 
+function decodeLatin1BytesAsUtf8(text) {
+  try {
+    const bytes = Uint8Array.from([...text].map((char) => char.charCodeAt(0) & 0xff));
+    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+  } catch {
+    return text;
+  }
+}
+
+function decodeUtf8BytesAsCp1251(text) {
+  try {
+    const bytes = new TextEncoder().encode(text);
+    return new TextDecoder('windows-1251', { fatal: true }).decode(bytes);
+  } catch {
+    return text;
+  }
+}
+
+function repairTextMojibake(text) {
+  const input = `${text || ''}`.trim();
+  if (!input) return '';
+
+  const variants = [
+    input,
+    decodeLatin1BytesAsUtf8(input),
+    decodeUtf8BytesAsCp1251(input),
+    decodeLatin1BytesAsUtf8(decodeUtf8BytesAsCp1251(input)),
+    decodeUtf8BytesAsCp1251(decodeLatin1BytesAsUtf8(input)),
+  ];
+
+  return variants.reduce((best, candidate) => (textQuality(candidate) > textQuality(best) ? candidate : best), input);
+}
+
+function looksEncodingBroken(text) {
+  const value = `${text || ''}`.trim();
+  if (!value) return true;
+  const questionCount = (value.match(/\?/g) || []).length;
+  return questionCount >= 3 || questionCount / Math.max(value.length, 1) > 0.18;
+}
+
+function normalizeAliasText(value) {
+  const alias = `${value || ''}`.trim();
+  if (!alias) return '';
+
+  const noBrackets = alias.replace(/^\[/, '').replace(/\]$/, '').trim();
+  const compact = noBrackets.replace(/\s+/g, ' ').trim();
+  if (!compact) return '';
+
+  return compact.split(' ??????')[0].trim();
+}
+
+function pickReadableName(raw, index) {
+  const sourceName = pickFirst(raw, ['name', 'fullName', 'displayName', 'contactName']);
+  const repairedName = repairTextMojibake(sourceName);
+
+  if (!looksEncodingBroken(repairedName)) {
+    return repairedName;
+  }
+
+  const aliasValue = normalizeAliasText(pickFirst(raw, ['aliases', 'keywords']));
+  if (aliasValue) {
+    return aliasValue;
+  }
+
+  return repairedName || `Contact ${index + 1}`;
+}
+
 function pickFirst(raw, keys) {
   for (const key of keys) {
     const value = raw?.[key];
@@ -146,9 +213,9 @@ function decodeJsonPayload(buffer, contentType = '') {
 }
 
 function normalizeContact(raw, index) {
-  const name = pickFirst(raw, ['name', 'fullName', 'displayName', 'contactName']) || `Contact ${index + 1}`;
-  const phone = pickFirst(raw, ['phone', 'phoneNumber', 'number', 'mobile', 'telephone']);
-  const paidPhone = pickFirst(raw, ['paidPhone', 'paid_number', 'paidNumber', 'secondaryPhone']);
+  const name = pickReadableName(raw, index);
+  const phone = repairTextMojibake(pickFirst(raw, ['phone', 'phoneNumber', 'number', 'mobile', 'telephone']));
+  const paidPhone = repairTextMojibake(pickFirst(raw, ['paidPhone', 'paid_number', 'paidNumber', 'secondaryPhone']));
 
   const explicitLogoRaw = pickFirst(raw, ['logoUrl', 'logo', 'image', 'avatar', 'photo', 'profileImage']);
   const website = pickFirst(raw, ['website', 'url', 'site']);
