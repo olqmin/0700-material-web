@@ -191,14 +191,12 @@ async function loadContacts() {
       },
     });
 
-    const rawContentType = response.headers.get('content-type') || '';
-    const contentType = getMimeType(rawContentType);
+    const contentType = getMimeType(response.headers.get('content-type') || '');
 
     debugLog('load-response', {
       ok: response.ok,
       status: response.status,
       contentType,
-      rawContentType,
     });
 
     if (!response.ok) {
