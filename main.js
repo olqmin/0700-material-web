@@ -1,7 +1,7 @@
 const API_URL = 'https://admin.0700bezplatnite.com/0700backend/contact/getIOSContacts';
 const LOGO_BASE_URL = 'https://admin.0700bezplatnite.com';
 const FAVICON_SERVICE = 'https://www.google.com/s2/favicons?sz=128&domain_url=';
-const DEBUG = false;
+const DEBUG = new URLSearchParams(window.location.search).get('debug') === '1';
 
 const searchInput = document.getElementById('searchInput');
 const callList = document.getElementById('callList');
@@ -116,31 +116,16 @@ function looksEncodingBroken(text) {
   return questionCount >= 3 || questionCount / Math.max(value.length, 1) > 0.18;
 }
 
-function normalizeAliasText(value) {
-  const alias = `${value || ''}`.trim();
-  if (!alias) return '';
-
-  const noBrackets = alias.replace(/^\[/, '').replace(/\]$/, '').trim();
-  const compact = noBrackets.replace(/\s+/g, ' ').trim();
-  if (!compact) return '';
-
-  return compact.split(' ??????')[0].trim();
-}
 
 function pickReadableName(raw, index) {
   const sourceName = pickFirst(raw, ['name', 'fullName', 'displayName', 'contactName']);
   const repairedName = repairTextMojibake(sourceName);
 
-  if (!looksEncodingBroken(repairedName)) {
-    return repairedName;
+  if (!sourceName) {
+    return `Contact ${index + 1}`;
   }
 
-  const aliasValue = normalizeAliasText(pickFirst(raw, ['aliases', 'keywords']));
-  if (aliasValue) {
-    return aliasValue;
-  }
-
-  return repairedName || `Contact ${index + 1}`;
+  return repairedName || sourceName;
 }
 
 function pickFirst(raw, keys) {
@@ -210,6 +195,25 @@ function decodeJsonPayload(buffer, contentType = '') {
   attempts.sort((a, b) => b.score - a.score);
   debugLog('decode-selected', { charset: attempts[0].charset, score: attempts[0].score });
   return attempts[0].parsed;
+}
+
+function debugCharsetSamples(bytes) {
+  if (!DEBUG) return;
+
+  const sampleSets = ['utf-8', 'windows-1251', 'iso-8859-1', 'koi8-r'];
+  for (const charset of sampleSets) {
+    try {
+      const text = new TextDecoder(charset).decode(bytes);
+      const parsed = parseJsonText(text);
+      const rows = asList(parsed).slice(0, 5);
+      debugLog('charset-sample', {
+        charset,
+        names: rows.map((row) => pickFirst(row, ['name', 'fullName', 'displayName', 'contactName'])),
+      });
+    } catch (error) {
+      debugLog('charset-sample-failed', { charset, error: String(error) });
+    }
+  }
 }
 
 function normalizeContact(raw, index) {
@@ -348,6 +352,7 @@ async function loadContacts() {
       preview: bytePreview,
     });
 
+    debugCharsetSamples(bytes);
     const payload = decodeJsonPayload(bytes, contentType);
     const list = asList(payload);
 
