@@ -1,7 +1,7 @@
 const API_URL = 'https://admin.0700bezplatnite.com/0700backend/contact/getIOSContacts';
 const LOGO_BASE_URL = 'https://admin.0700bezplatnite.com';
 const FAVICON_SERVICE = 'https://www.google.com/s2/favicons?sz=128&domain_url=';
-const DEBUG = true;
+const DEBUG = false;
 
 const searchInput = document.getElementById('searchInput');
 const callList = document.getElementById('callList');
@@ -40,11 +40,15 @@ function normalizeLogoUrl(input) {
   const value = (srcMatch?.[1] || urlMatch?.[1] || raw).trim();
 
   if (!value) return '';
-  if (value.startsWith('//')) return `https:${value}`;
-  if (value.startsWith('http://')) return `https://${value.slice('http://'.length)}`;
-  if (value.startsWith('/')) return `${LOGO_BASE_URL}${value}`;
-  if (!/^https?:\/\//i.test(value)) return `${LOGO_BASE_URL}/${value.replace(/^\/+/, '')}`;
-  return value.replace(/^http:\/\//i, 'https://');
+  let normalized = value;
+  if (normalized.startsWith('//')) normalized = `https:${normalized}`;
+  else if (normalized.startsWith('http://')) normalized = `https://${normalized.slice('http://'.length)}`;
+  else if (normalized.startsWith('/')) normalized = `${LOGO_BASE_URL}${normalized}`;
+  else if (!/^https?:\/\//i.test(normalized)) normalized = `${LOGO_BASE_URL}/${normalized.replace(/^\/+/, '')}`;
+
+  normalized = normalized.replace(/^http:\/\//i, 'https://');
+  normalized = normalized.replace('://admin.0700bezplatnite.com:80/', '://admin.0700bezplatnite.com/');
+  return normalized;
 }
 
 function fallbackLogoFromWebsite(website) {
@@ -90,7 +94,7 @@ function payloadQuality(payload) {
   for (const row of list) {
     const name = pickFirst(row, ['name', 'fullName', 'displayName', 'contactName']);
     const phone = pickFirst(row, ['phone', 'phoneNumber', 'number', 'telephone']);
-    const logo = pickFirst(row, ['logo', 'image', 'avatar']);
+    const logo = pickFirst(row, ['logoUrl', 'logo', 'image', 'avatar']);
     score += textQuality(`${name} ${phone}`);
     if (logo) score += 2;
   }
@@ -146,7 +150,7 @@ function normalizeContact(raw, index) {
   const phone = pickFirst(raw, ['phone', 'phoneNumber', 'number', 'mobile', 'telephone']);
   const paidPhone = pickFirst(raw, ['paidPhone', 'paid_number', 'paidNumber', 'secondaryPhone']);
 
-  const explicitLogoRaw = pickFirst(raw, ['logo', 'image', 'avatar', 'photo', 'profileImage']);
+  const explicitLogoRaw = pickFirst(raw, ['logoUrl', 'logo', 'image', 'avatar', 'photo', 'profileImage']);
   const website = pickFirst(raw, ['website', 'url', 'site']);
   const logo = normalizeLogoUrl(explicitLogoRaw) || fallbackLogoFromWebsite(website);
 
