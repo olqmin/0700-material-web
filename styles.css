@@ -57,16 +57,31 @@ body {
   min-height: 100vh;
   padding: 24px 18px 20px;
   background: var(--md-sys-color-background);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .top-app-bar {
-  margin-bottom: 18px;
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  order: 2;
+  padding-top: 8px;
+  padding-bottom: max(8px, env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, transparent 0%, var(--md-sys-color-background) 28%);
 }
 
 #searchInput {
   width: 100%;
 }
 
+
+.history {
+  order: 1;
+  flex: 1;
+  padding-bottom: 96px;
+}
 
 .status-message {
   margin: 0 0 10px;
@@ -239,9 +254,21 @@ body {
   }
 }
 
+.mobile-search-active .top-app-bar {
+  top: 0;
+  bottom: auto;
+  order: 0;
+  padding-top: max(8px, env(safe-area-inset-top));
+  background: var(--md-sys-color-background);
+}
+
 @media (max-width: 480px) {
   .app-shell {
     width: 100%;
+  }
+
+  .history {
+    padding-bottom: 112px;
   }
 
   .details .name { font-size: 1.75rem; }

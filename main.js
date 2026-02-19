@@ -7,6 +7,12 @@ const searchInput = document.getElementById('searchInput');
 const callList = document.getElementById('callList');
 const statusMessage = document.getElementById('statusMessage');
 
+const mobileSearchMedia = window.matchMedia('(max-width: 768px)');
+
+function setMobileSearchActive(isActive) {
+  document.body.classList.toggle('mobile-search-active', Boolean(isActive && mobileSearchMedia.matches));
+}
+
 let contacts = [];
 
 function debugLog(stage, details = {}) {
@@ -241,6 +247,27 @@ async function loadContacts() {
 
 searchInput?.addEventListener('input', (event) => {
   filterContacts(event.target?.value || '');
+});
+
+
+searchInput?.addEventListener('focusin', () => {
+  setMobileSearchActive(true);
+});
+
+searchInput?.addEventListener('focusout', () => {
+  setMobileSearchActive(false);
+});
+
+searchInput?.addEventListener('pointerdown', () => {
+  if (!mobileSearchMedia.matches) return;
+  setMobileSearchActive(true);
+  requestAnimationFrame(() => searchInput.focus());
+});
+
+mobileSearchMedia.addEventListener('change', () => {
+  if (!mobileSearchMedia.matches) {
+    setMobileSearchActive(false);
+  }
 });
 
 
