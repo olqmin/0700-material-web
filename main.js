@@ -13,6 +13,15 @@ function setMobileSearchActive(isActive) {
   document.body.classList.toggle('mobile-search-active', Boolean(isActive && mobileSearchMedia.matches));
 }
 
+function focusSearchInputForMobile() {
+  if (!searchInput || !mobileSearchMedia.matches) return;
+
+  searchInput.focus();
+  const internalInput = searchInput.shadowRoot?.querySelector('input');
+  internalInput?.focus();
+}
+
+
 let contacts = [];
 
 function debugLog(stage, details = {}) {
@@ -251,17 +260,19 @@ searchInput?.addEventListener('input', (event) => {
 
 
 searchInput?.addEventListener('focusin', () => {
+  if (!mobileSearchMedia.matches) return;
   setMobileSearchActive(true);
 });
 
 searchInput?.addEventListener('focusout', () => {
+  if (!mobileSearchMedia.matches) return;
   setMobileSearchActive(false);
 });
 
 searchInput?.addEventListener('pointerdown', () => {
   if (!mobileSearchMedia.matches) return;
   setMobileSearchActive(true);
-  requestAnimationFrame(() => searchInput.focus());
+  requestAnimationFrame(focusSearchInputForMobile);
 });
 
 mobileSearchMedia.addEventListener('change', () => {

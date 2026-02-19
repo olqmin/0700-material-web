@@ -12,7 +12,7 @@ A static Material Web dialer-style interface for shared hosting.
 
 - Automatic black/white theme based on device color-scheme setting
 - Wider app layout for desktop preview
-- Sticky search field (desktop: top, mobile: bottom docked and moves to top on focus)
+- Sticky search field (desktop fixed at top; mobile-only: bottom docked, moves to top on focus)
 - Contacts rendered dynamically from API JSON
 - Displays contact logo, name, phone number, and paid phone (if present)
 - Full-row tap/click to dial via `tel:` links
