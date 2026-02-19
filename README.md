@@ -15,6 +15,8 @@ A static Material Web dialer-style interface for shared hosting.
 - Material search field without underline
 - Contacts rendered dynamically from API JSON
 - Displays contact logo, name, phone number, and paid phone (if present)
+- Full-row tap/click to dial via `tel:` links
+- Ripple feedback on row click/tap
 - Client-side search filtering in plain JavaScript
 
 ## API source

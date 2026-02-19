@@ -109,6 +109,13 @@ function initials(name) {
     .join('') || '?';
 }
 
+function toTelHref(phone) {
+  const raw = `${phone || ''}`.trim();
+  if (!raw) return 'tel:';
+  const normalized = raw.replace(/[^\d+#*;,]/g, '');
+  return `tel:${normalized}`;
+}
+
 function contactRowTemplate(contact) {
   const safeName = escapeHtml(contact.name);
   const safePhone = escapeHtml(contact.phone || 'No phone number');
@@ -117,6 +124,7 @@ function contactRowTemplate(contact) {
   const safeNameLower = escapeHtml(contact.name.toLowerCase());
   const safePhoneLower = escapeHtml((contact.phone || '').toLowerCase());
   const safePaidLower = escapeHtml((contact.paidPhone || '').toLowerCase());
+  const telHref = escapeHtml(toTelHref(contact.phone));
 
   const avatar = contact.logo
     ? `<img class="avatar-image" src="${encodeURI(contact.logo)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove(); this.parentElement.textContent='${escapeHtml(initials(contact.name))}';" />`
@@ -127,14 +135,16 @@ function contactRowTemplate(contact) {
     : '';
 
   return `
-    <li class="call-item" data-name="${safeNameLower}" data-phone="${safePhoneLower}" data-paid="${safePaidLower}">
-      <div class="avatar">${avatar}</div>
-      <div class="details">
-        <p class="name">${safeName}</p>
-        <p class="meta"><span class="material-symbols-rounded">call</span> ${safePhone}</p>
-        ${paidPhoneLine}
-      </div>
-      <button class="icon-action" aria-label="Call ${safeName}"><span class="material-symbols-rounded">phone_forwarded</span></button>
+    <li>
+      <a class="call-item" href="${telHref}" data-name="${safeNameLower}" data-phone="${safePhoneLower}" data-paid="${safePaidLower}" aria-label="Call ${safeName}">
+        <div class="avatar">${avatar}</div>
+        <div class="details">
+          <p class="name">${safeName}</p>
+          <p class="meta"><span class="material-symbols-rounded">call</span> ${safePhone}</p>
+          ${paidPhoneLine}
+        </div>
+        <span class="icon-action" aria-hidden="true"><span class="material-symbols-rounded">phone_forwarded</span></span>
+      </a>
     </li>
   `;
 }
@@ -231,6 +241,25 @@ async function loadContacts() {
 
 searchInput?.addEventListener('input', (event) => {
   filterContacts(event.target?.value || '');
+});
+
+
+callList?.addEventListener('pointerdown', (event) => {
+  const row = event.target.closest('.call-item');
+  if (!row) return;
+
+  const bounds = row.getBoundingClientRect();
+  const diameter = Math.max(bounds.width, bounds.height);
+  const ripple = document.createElement('span');
+  ripple.className = 'row-ripple';
+  ripple.style.width = `${diameter}px`;
+  ripple.style.height = `${diameter}px`;
+  ripple.style.left = `${event.clientX - bounds.left - diameter / 2}px`;
+  ripple.style.top = `${event.clientY - bounds.top - diameter / 2}px`;
+
+  row.querySelector('.row-ripple')?.remove();
+  row.append(ripple);
+  ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
 });
 
 loadContacts();
