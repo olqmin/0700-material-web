@@ -10,13 +10,14 @@ A static Material Web dialer-style interface for shared hosting.
 
 ## What's included
 
-- Pure black theme
+- Automatic black/white theme based on device color-scheme setting
 - Wider app layout for desktop preview
 - Material search field without underline
 - Contacts rendered dynamically from API JSON
 - Displays contact logo, name, phone number, and paid phone (if present)
 - Full-row tap/click to dial via `tel:` links
 - Ripple feedback on row click/tap
+- Removed default mobile tap highlight flash on contact row links
 - Client-side search filtering in plain JavaScript
 
 ## API source
