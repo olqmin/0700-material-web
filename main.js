@@ -31,103 +31,6 @@ function asList(payload) {
   return [];
 }
 
-function normalizeLogoUrl(input) {
-  const raw = `${input || ''}`.trim();
-  if (!raw) return '';
-
-  const srcMatch = raw.match(/src\s*=\s*['\"]([^'\"]+)['\"]/i);
-  const urlMatch = raw.match(/(https?:\/\/[^\s"'>]+|\/logos\/[^\s"'>]+)/i);
-  const value = (srcMatch?.[1] || urlMatch?.[1] || raw).trim();
-
-  if (!value) return '';
-  let normalized = value;
-  if (normalized.startsWith('//')) normalized = `https:${normalized}`;
-  else if (normalized.startsWith('http://')) normalized = `https://${normalized.slice('http://'.length)}`;
-  else if (normalized.startsWith('/')) normalized = `${LOGO_BASE_URL}${normalized}`;
-  else if (!/^https?:\/\//i.test(normalized)) normalized = `${LOGO_BASE_URL}/${normalized.replace(/^\/+/, '')}`;
-
-  normalized = normalized.replace(/^http:\/\//i, 'https://');
-  normalized = normalized.replace('://admin.0700bezplatnite.com:80/', '://admin.0700bezplatnite.com/');
-  return normalized;
-}
-
-function fallbackLogoFromWebsite(website) {
-  const raw = `${website || ''}`.trim();
-  if (!raw) return '';
-
-  const fixed = raw.startsWith('http://') ? `https://${raw.slice('http://'.length)}` : raw;
-  const normalized = /^https?:\/\//i.test(fixed) ? fixed : `https://${fixed.replace(/^\/+/, '')}`;
-  return `${FAVICON_SERVICE}${encodeURIComponent(normalized)}`;
-}
-
-function textQuality(text) {
-  const value = `${text || ''}`;
-  const cyrillicCount = (value.match(/[\u0400-\u04FF]/g) || []).length;
-  const latinCount = (value.match(/[A-Za-z]/g) || []).length;
-  const digitCount = (value.match(/[0-9]/g) || []).length;
-  const replacementCount = (value.match(/�/g) || []).length;
-  const questionCount = (value.match(/\?/g) || []).length;
-  const mojibakeCount = (value.match(/[ÐÑÃÂ]/g) || []).length;
-
-  return cyrillicCount * 7 + latinCount + digitCount - replacementCount * 10 - questionCount * 6 - mojibakeCount * 5;
-}
-
-function parseJsonText(text) {
-  return JSON.parse(text.replace(/^\uFEFF/, ''));
-}
-
-function decodeLatin1BytesAsUtf8(text) {
-  try {
-    const bytes = Uint8Array.from([...text].map((char) => char.charCodeAt(0) & 0xff));
-    return new TextDecoder('utf-8', { fatal: true }).decode(bytes);
-  } catch {
-    return text;
-  }
-}
-
-function decodeUtf8BytesAsCp1251(text) {
-  try {
-    const bytes = new TextEncoder().encode(text);
-    return new TextDecoder('windows-1251', { fatal: true }).decode(bytes);
-  } catch {
-    return text;
-  }
-}
-
-function repairTextMojibake(text) {
-  const input = `${text || ''}`.trim();
-  if (!input) return '';
-
-  const variants = [
-    input,
-    decodeLatin1BytesAsUtf8(input),
-    decodeUtf8BytesAsCp1251(input),
-    decodeLatin1BytesAsUtf8(decodeUtf8BytesAsCp1251(input)),
-    decodeUtf8BytesAsCp1251(decodeLatin1BytesAsUtf8(input)),
-  ];
-
-  return variants.reduce((best, candidate) => (textQuality(candidate) > textQuality(best) ? candidate : best), input);
-}
-
-function looksEncodingBroken(text) {
-  const value = `${text || ''}`.trim();
-  if (!value) return true;
-  const questionCount = (value.match(/\?/g) || []).length;
-  return questionCount >= 3 || questionCount / Math.max(value.length, 1) > 0.18;
-}
-
-
-function pickReadableName(raw, index) {
-  const sourceName = pickFirst(raw, ['name', 'fullName', 'displayName', 'contactName']);
-  const repairedName = repairTextMojibake(sourceName);
-
-  if (!sourceName) {
-    return `Contact ${index + 1}`;
-  }
-
-  return repairedName || sourceName;
-}
-
 function pickFirst(raw, keys) {
   for (const key of keys) {
     const value = raw?.[key];
@@ -138,109 +41,63 @@ function pickFirst(raw, keys) {
   return '';
 }
 
-function payloadQuality(payload) {
-  const list = asList(payload).slice(0, 80);
-  if (!list.length) return -100000;
-
-  let score = 0;
-  for (const row of list) {
-    const name = pickFirst(row, ['name', 'fullName', 'displayName', 'contactName']);
-    const phone = pickFirst(row, ['phone', 'phoneNumber', 'number', 'telephone']);
-    const logo = pickFirst(row, ['logoUrl', 'logo', 'image', 'avatar']);
-    score += textQuality(`${name} ${phone}`);
-    if (logo) score += 2;
-  }
-  return score;
+function getMimeType(contentType = '') {
+  return `${contentType}`.split(';')[0].trim().toLowerCase();
 }
 
-function tryDecode(buffer, charset) {
-  const decoder = new TextDecoder(charset);
-  const text = decoder.decode(buffer);
-  const parsed = parseJsonText(text);
-  const score = payloadQuality(parsed);
-  const first = asList(parsed)[0] || {};
-  const firstName = pickFirst(first, ['name', 'fullName', 'displayName', 'contactName']);
-
-  debugLog('decode-attempt', {
-    charset,
-    score,
-    firstName,
-  });
-
-  return { charset, score, parsed };
+function parseJsonPayload(text) {
+  return JSON.parse(text.replace(/^\uFEFF/, ''));
 }
 
-function decodeJsonPayload(buffer, contentType = '') {
-  const declaredCharset = contentType.match(/charset=([^;]+)/i)?.[1]?.trim().toLowerCase();
-  const charsets = [declaredCharset, 'utf-8', 'windows-1251', 'koi8-r', 'iso-8859-1'].filter(Boolean);
+function normalizeLogoUrl(input) {
+  const raw = `${input || ''}`.trim();
+  if (!raw) return '';
 
-  const seen = new Set();
-  const attempts = [];
+  const srcMatch = raw.match(/src\s*=\s*['\"]([^'\"]+)['\"]/i);
+  const urlMatch = raw.match(/(https?:\/\/[^\s"'>]+|\/logos\/[^\s"'>]+)/i);
+  const value = (srcMatch?.[1] || urlMatch?.[1] || raw).trim();
 
-  for (const charset of charsets) {
-    if (seen.has(charset)) continue;
-    seen.add(charset);
+  if (!value) return '';
 
-    try {
-      attempts.push(tryDecode(buffer, charset));
-    } catch (error) {
-      debugLog('decode-attempt-failed', { charset, error: String(error) });
-    }
-  }
+  let normalized = value;
+  if (normalized.startsWith('//')) normalized = `https:${normalized}`;
+  else if (normalized.startsWith('http://')) normalized = `https://${normalized.slice('http://'.length)}`;
+  else if (normalized.startsWith('/')) normalized = `${LOGO_BASE_URL}${normalized}`;
+  else if (!/^https?:\/\//i.test(normalized)) normalized = `${LOGO_BASE_URL}/${normalized.replace(/^\/+/, '')}`;
 
-  if (!attempts.length) {
-    throw new Error('Unable to decode contacts payload as JSON.');
-  }
+  normalized = normalized.replace(/^http:\/\//i, 'https://');
+  normalized = normalized.replace('://admin.0700bezplatnite.com:80/', '://admin.0700bezplatnite.com/');
 
-  attempts.sort((a, b) => b.score - a.score);
-  debugLog('decode-selected', { charset: attempts[0].charset, score: attempts[0].score });
-  return attempts[0].parsed;
+  return normalized;
 }
 
-function debugCharsetSamples(bytes) {
-  if (!DEBUG) return;
+function fallbackLogoFromWebsite(website) {
+  const raw = `${website || ''}`.trim();
+  if (!raw) return '';
 
-  const sampleSets = ['utf-8', 'windows-1251', 'iso-8859-1', 'koi8-r'];
-  for (const charset of sampleSets) {
-    try {
-      const text = new TextDecoder(charset).decode(bytes);
-      const parsed = parseJsonText(text);
-      const rows = asList(parsed).slice(0, 5);
-      debugLog('charset-sample', {
-        charset,
-        names: rows.map((row) => pickFirst(row, ['name', 'fullName', 'displayName', 'contactName'])),
-      });
-    } catch (error) {
-      debugLog('charset-sample-failed', { charset, error: String(error) });
-    }
-  }
+  const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw.replace(/^\/+/, '')}`;
+  const secure = withProtocol.replace(/^http:\/\//i, 'https://');
+  return `${FAVICON_SERVICE}${encodeURIComponent(secure)}`;
 }
 
 function normalizeContact(raw, index) {
-  const name = pickReadableName(raw, index);
-  const phone = repairTextMojibake(pickFirst(raw, ['phone', 'phoneNumber', 'number', 'mobile', 'telephone']));
-  const paidPhone = repairTextMojibake(pickFirst(raw, ['paidPhone', 'paid_number', 'paidNumber', 'secondaryPhone']));
+  const name = pickFirst(raw, ['name', 'fullName', 'displayName', 'contactName']) || `Contact ${index + 1}`;
+  const phone = pickFirst(raw, ['phone', 'phoneNumber', 'number', 'mobile', 'telephone']);
+  const paidPhone = pickFirst(raw, ['paidPhone', 'paid_number', 'paidNumber', 'secondaryPhone']);
 
   const explicitLogoRaw = pickFirst(raw, ['logoUrl', 'logo', 'image', 'avatar', 'photo', 'profileImage']);
   const website = pickFirst(raw, ['website', 'url', 'site']);
   const logo = normalizeLogoUrl(explicitLogoRaw) || fallbackLogoFromWebsite(website);
 
   debugLog('contact-normalized', {
-    index,
     name,
     phone,
     paidPhone,
     explicitLogoRaw,
-    website,
-    finalLogo: logo,
+    logo,
   });
 
-  return {
-    name,
-    phone,
-    paidPhone,
-    logo,
-  };
+  return { name, phone, paidPhone, logo };
 }
 
 function initials(name) {
@@ -299,7 +156,6 @@ function renderContacts(list) {
 function filterContacts(query) {
   const normalized = query.trim().toLowerCase();
   const rows = callList.querySelectorAll('.call-item');
-
   let visibleCount = 0;
 
   for (const row of rows) {
@@ -330,35 +186,38 @@ async function loadContacts() {
 
     const response = await fetch(API_URL, {
       method: 'GET',
-      headers: { Accept: 'application/json, text/plain, */*' },
+      headers: {
+        Accept: 'application/json',
+      },
     });
+
+    const rawContentType = response.headers.get('content-type') || '';
+    const contentType = getMimeType(rawContentType);
 
     debugLog('load-response', {
       ok: response.ok,
       status: response.status,
-      contentType: response.headers.get('content-type') || '',
+      contentType,
+      rawContentType,
     });
 
     if (!response.ok) {
       throw new Error(`Request failed (${response.status})`);
     }
 
-    const bytes = await response.arrayBuffer();
-    const contentType = response.headers.get('content-type') || '';
-    const bytePreview = Array.from(new Uint8Array(bytes).slice(0, 80));
-
-    debugLog('load-bytes', {
-      byteLength: bytes.byteLength,
-      preview: bytePreview,
+    const responseText = await response.text();
+    debugLog('load-text-preview', {
+      firstChars: responseText.slice(0, 240),
+      length: responseText.length,
     });
 
-    debugCharsetSamples(bytes);
-    const payload = decodeJsonPayload(bytes, contentType);
+    const payload = parseJsonPayload(responseText);
     const list = asList(payload);
 
     debugLog('payload-shape', {
       listCount: list.length,
       sampleKeys: Object.keys(list[0] || {}),
+      sampleName: pickFirst(list[0], ['name', 'fullName', 'displayName', 'contactName']),
     });
 
     contacts = list.map(normalizeContact);
