@@ -101,7 +101,6 @@ body {
   max-width: 100%;
   min-width: 0;
   font-size: 16px;
-  contain: inline-size;
   overflow: hidden;
 }
 
@@ -255,6 +254,7 @@ body {
 
 .details .meta .material-symbols-rounded {
   font-size: 1.25em;
+}
 
 .icon-action {
   width: 48px;
