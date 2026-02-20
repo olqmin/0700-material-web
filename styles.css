@@ -110,6 +110,11 @@ body {
   font-size: 16px;
 }
 
+#searchInput [slot='leading-icon'] {
+  font-size: 1.3rem;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
 #searchInput:focus-visible {
   outline: none;
 }

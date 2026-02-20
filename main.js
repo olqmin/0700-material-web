@@ -9,6 +9,23 @@ const statusMessage = document.getElementById('statusMessage');
 
 const mobileSearchMedia = window.matchMedia('(max-width: 768px) and (hover: none) and (pointer: coarse)');
 
+const prefersBulgarian = (navigator.language || navigator.languages?.[0] || '').toLowerCase().startsWith('bg');
+
+function searchLabelText(count) {
+  const safeCount = Number.isFinite(count) && count >= 0 ? count : 0;
+  if (prefersBulgarian) {
+    return `Търсене в ${safeCount} контакта`;
+  }
+  return `Search in ${safeCount} contacts`;
+}
+
+function updateSearchCopy(count) {
+  if (!searchInput) return;
+  const label = searchLabelText(count);
+  searchInput.label = label;
+  searchInput.setAttribute('aria-label', label);
+}
+
 function isLikelyMobileDevice() {
   const ua = navigator.userAgent || '';
   const mobileUa = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua);
@@ -254,10 +271,12 @@ async function loadContacts() {
     });
 
     contacts = list.map(normalizeContact);
+    updateSearchCopy(contacts.length);
     renderContacts(contacts);
   } catch (error) {
     console.error('[DialerDebug] load-failed', error);
     contacts = [];
+    updateSearchCopy(0);
     renderContacts([]);
     statusMessage.textContent = 'Could not load contacts from API. Check CORS/network and try again.';
     statusMessage.hidden = false;
@@ -310,4 +329,5 @@ callList?.addEventListener('pointerdown', (event) => {
   ripple.addEventListener('animationend', () => ripple.remove(), { once: true });
 });
 
+updateSearchCopy(0);
 loadContacts();
