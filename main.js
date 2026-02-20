@@ -360,7 +360,6 @@ searchInput?.addEventListener('focusout', () => {
 searchInput?.addEventListener('pointerdown', (event) => {
   if (!mobileSearchMedia.matches || !mobileDevice) return;
 
-  event.preventDefault();
   event.stopPropagation();
 
   const now = Date.now();
