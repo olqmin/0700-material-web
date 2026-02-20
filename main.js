@@ -356,12 +356,21 @@ searchInput?.addEventListener('focusout', () => {
   scheduleMobileSearchDeactivate();
 });
 
-searchInput?.addEventListener('pointerdown', () => {
+searchInput?.addEventListener('pointerdown', (event) => {
   if (!mobileSearchMedia.matches || !mobileDevice) return;
+
+  event.preventDefault();
+  event.stopPropagation();
+
   lastMobileSearchTapAt = Date.now();
   clearMobileDeactivateTimer();
   setMobileSearchActive(true);
   requestAnimationFrame(focusSearchInputForMobile);
+});
+
+searchInput?.addEventListener('click', (event) => {
+  if (!mobileSearchMedia.matches || !mobileDevice) return;
+  event.stopPropagation();
 });
 
 mobileSearchMedia.addEventListener('change', () => {
