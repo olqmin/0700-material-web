@@ -23,6 +23,9 @@
   --ripple-color: rgba(0, 0, 0, 0.18);
   --search-divider: rgba(17, 17, 17, 0.12);
   --search-shadow-top: rgba(17, 17, 17, 0.16);
+  --search-field-bg: #ffffff;
+  --search-field-border: rgba(17, 17, 17, 0.22);
+  --search-field-shadow: 0 6px 18px rgba(17, 17, 17, 0.14);
 }
 
 
@@ -42,6 +45,9 @@
     --ripple-color: rgba(255, 255, 255, 0.22);
     --search-divider: rgba(255, 255, 255, 0.14);
     --search-shadow-top: rgba(0, 0, 0, 0.5);
+    --search-field-bg: #1f1f1f;
+    --search-field-border: rgba(255, 255, 255, 0.2);
+    --search-field-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
   }
 }
 
@@ -103,6 +109,10 @@ body {
   font-size: 16px;
   overflow: hidden;
   resize: none;
+  --md-filled-text-field-container-color: var(--search-field-bg);
+  border: 1px solid var(--search-field-border);
+  border-radius: 28px;
+  box-shadow: var(--search-field-shadow);
 }
 
 #searchInput::part(input),
@@ -117,6 +127,11 @@ body {
 
 #searchInput:focus-visible {
   outline: none;
+}
+
+#searchInput:focus-within {
+  border-color: color-mix(in srgb, var(--search-field-border) 35%, #6ea8ff);
+  box-shadow: 0 0 0 1px color-mix(in srgb, #6ea8ff 45%, transparent), var(--search-field-shadow);
 }
 
 .top-app-bar,
