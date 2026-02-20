@@ -91,7 +91,7 @@ body {
   padding-top: max(8px, env(safe-area-inset-top));
   padding-bottom: 10px;
   background: linear-gradient(180deg, var(--md-sys-color-background) 66%, transparent 100%);
-  border-bottom: 1px solid var(--search-divider);
+  border-bottom: 0;
   box-shadow: 0 12px 26px var(--search-shadow-top);
 }
 
