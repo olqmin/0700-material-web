@@ -335,7 +335,7 @@ body {
     max-width: calc(460px - 24px);
     margin-inline: auto;
     padding: 0;
-    border: 1px solid var(--search-divider);
+    border: 0;
     border-radius: 22px;
     background: color-mix(in srgb, var(--md-sys-color-surface) 94%, transparent);
     box-shadow: 0 12px 28px var(--search-shadow-top);
@@ -355,13 +355,12 @@ body {
   body.is-mobile-device.mobile-search-active .top-app-bar {
     left: 0;
     right: 0;
-    top: max(6px, env(safe-area-inset-top));
+    top: max(14px, env(safe-area-inset-top));
     bottom: auto;
     order: 0;
     width: min(100%, 460px);
     max-width: 100%;
-    border-left: 0;
-    border-right: 0;
+    border: 0;
     border-radius: 0;
     background: linear-gradient(180deg, var(--md-sys-color-background) 80%, transparent 100%);
     box-shadow: 0 10px 22px var(--search-shadow-top);
@@ -370,7 +369,7 @@ body {
   }
 
   body.is-mobile-device.mobile-search-active .history {
-    padding-top: calc(74px + env(safe-area-inset-top));
+    padding-top: calc(86px + env(safe-area-inset-top));
   }
 
 }
