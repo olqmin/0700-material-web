@@ -9,12 +9,22 @@ const statusMessage = document.getElementById('statusMessage');
 
 const mobileSearchMedia = window.matchMedia('(max-width: 768px) and (hover: none) and (pointer: coarse)');
 
+function isLikelyMobileDevice() {
+  const ua = navigator.userAgent || '';
+  const mobileUa = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(ua);
+  const iPadLikeTouch = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+  return mobileUa || iPadLikeTouch;
+}
+
+const mobileDevice = isLikelyMobileDevice();
+document.body.classList.toggle('is-mobile-device', mobileDevice);
+
 function setMobileSearchActive(isActive) {
-  document.body.classList.toggle('mobile-search-active', Boolean(isActive && mobileSearchMedia.matches));
+  document.body.classList.toggle('mobile-search-active', Boolean(isActive && mobileSearchMedia.matches && mobileDevice));
 }
 
 function focusSearchInputForMobile() {
-  if (!searchInput || !mobileSearchMedia.matches) return;
+  if (!searchInput || !mobileSearchMedia.matches || !mobileDevice) return;
 
   searchInput.focus();
   const internalInput = searchInput.shadowRoot?.querySelector('input');
@@ -260,23 +270,23 @@ searchInput?.addEventListener('input', (event) => {
 
 
 searchInput?.addEventListener('focusin', () => {
-  if (!mobileSearchMedia.matches) return;
+  if (!mobileSearchMedia.matches || !mobileDevice) return;
   setMobileSearchActive(true);
 });
 
 searchInput?.addEventListener('focusout', () => {
-  if (!mobileSearchMedia.matches) return;
+  if (!mobileSearchMedia.matches || !mobileDevice) return;
   setMobileSearchActive(false);
 });
 
 searchInput?.addEventListener('pointerdown', () => {
-  if (!mobileSearchMedia.matches) return;
+  if (!mobileSearchMedia.matches || !mobileDevice) return;
   setMobileSearchActive(true);
   requestAnimationFrame(focusSearchInputForMobile);
 });
 
 mobileSearchMedia.addEventListener('change', () => {
-  if (!mobileSearchMedia.matches) {
+  if (!mobileSearchMedia.matches || !mobileDevice) {
     setMobileSearchActive(false);
   }
 });
