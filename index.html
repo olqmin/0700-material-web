@@ -13,7 +13,13 @@
     <script type="module" src="https://esm.run/@material/web/all.js"></script>
     <script defer src="main.js"></script>
   </head>
-  <body>
+  <body class="app-loading">
+    <div id="loadingOverlay" class="loading-overlay" role="status" aria-live="polite" aria-label="Loading contacts">
+      <div class="loader-card">
+        <span class="loader-spinner" aria-hidden="true"></span>
+        <p id="loadingText" class="loader-text">Loading contacts…</p>
+      </div>
+    </div>
     <main class="app-shell" aria-label="Dialer app preview">
       <header class="top-app-bar">
         <md-filled-text-field

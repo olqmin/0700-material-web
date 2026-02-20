@@ -6,6 +6,8 @@ const DEBUG = new URLSearchParams(window.location.search).get('debug') === '1';
 const searchInput = document.getElementById('searchInput');
 const callList = document.getElementById('callList');
 const statusMessage = document.getElementById('statusMessage');
+const loadingOverlay = document.getElementById('loadingOverlay');
+const loadingText = document.getElementById('loadingText');
 
 const mobileSearchMedia = window.matchMedia('(max-width: 768px) and (hover: none) and (pointer: coarse)');
 
@@ -24,6 +26,17 @@ function updateSearchCopy(count) {
   const label = searchLabelText(count);
   searchInput.label = label;
   searchInput.setAttribute('aria-label', label);
+}
+
+
+function loadingCopyText() {
+  return prefersBulgarian ? 'Зареждане на контакти…' : 'Loading contacts…';
+}
+
+function setLoadingState(isLoading) {
+  document.body.classList.toggle('app-loading', Boolean(isLoading));
+  if (loadingText) loadingText.textContent = loadingCopyText();
+  if (loadingOverlay) loadingOverlay.setAttribute('aria-hidden', isLoading ? 'false' : 'true');
 }
 
 function isLikelyMobileDevice() {
@@ -234,6 +247,7 @@ function filterContacts(query) {
 
 async function loadContacts() {
   try {
+    setLoadingState(true);
     debugLog('load-start', { url: API_URL });
 
     const response = await fetch(API_URL, {
@@ -280,6 +294,8 @@ async function loadContacts() {
     renderContacts([]);
     statusMessage.textContent = 'Could not load contacts from API. Check CORS/network and try again.';
     statusMessage.hidden = false;
+  } finally {
+    setLoadingState(false);
   }
 }
 
@@ -330,4 +346,5 @@ callList?.addEventListener('pointerdown', (event) => {
 });
 
 updateSearchCopy(0);
+setLoadingState(true);
 loadContacts();
