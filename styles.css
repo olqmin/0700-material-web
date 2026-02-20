@@ -51,8 +51,10 @@
 
 html,
 body {
+  width: 100%;
   max-width: 100%;
   overflow-x: hidden;
+  position: relative;
 }
 
 body {
@@ -66,13 +68,15 @@ body {
 }
 
 .app-shell {
-  width: min(100%, 460px);
+  width: min(100vw, 460px);
+  max-width: 100%;
   min-height: 100vh;
   padding: 24px 18px 20px;
   background: var(--md-sys-color-background);
   display: flex;
   flex-direction: column;
   gap: 12px;
+  overflow-x: hidden;
 }
 
 .top-app-bar {
@@ -82,7 +86,8 @@ body {
   order: 0;
   width: 100%;
   max-width: 100%;
-  overflow-x: clip;
+  min-width: 0;
+  overflow-x: hidden;
   padding-top: max(8px, env(safe-area-inset-top));
   padding-bottom: 10px;
   background: linear-gradient(180deg, var(--md-sys-color-background) 66%, transparent 100%);
@@ -96,11 +101,17 @@ body {
   max-width: 100%;
   min-width: 0;
   font-size: 16px;
+  contain: inline-size;
+  overflow: hidden;
 }
 
 #searchInput::part(input),
 #searchInput::part(label) {
   font-size: 16px;
+}
+
+#searchInput:focus-visible {
+  outline: none;
 }
 
 
