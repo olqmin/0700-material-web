@@ -77,14 +77,29 @@ function isSearchInputFocused() {
   );
 }
 
+function isKeyboardLikelyOpen() {
+  if (!mobileSearchMedia.matches || !mobileDevice) return false;
+
+  const viewportHeight = window.visualViewport?.height || window.innerHeight;
+  const layoutHeight = document.documentElement.clientHeight || window.innerHeight;
+  const delta = layoutHeight - viewportHeight;
+
+  return delta > 120;
+}
+
 function scheduleMobileSearchDeactivate() {
   clearMobileDeactivateTimer();
   pendingMobileDeactivate = setTimeout(() => {
     pendingMobileDeactivate = null;
-    if (!isSearchInputFocused()) {
-      setMobileSearchActive(false);
+    if (isSearchInputFocused()) return;
+
+    if (isKeyboardLikelyOpen()) {
+      requestAnimationFrame(focusSearchInputForMobile);
+      return;
     }
-  }, 220);
+
+    setMobileSearchActive(false);
+  }, 320);
 }
 
 function focusSearchInputForMobile() {
@@ -347,7 +362,7 @@ searchInput?.addEventListener('focusin', () => {
 searchInput?.addEventListener('focusout', () => {
   if (!mobileSearchMedia.matches || !mobileDevice) return;
 
-  const blurImmediatelyAfterTap = Date.now() - lastMobileSearchTapAt < 900;
+  const blurImmediatelyAfterTap = Date.now() - lastMobileSearchTapAt < 1800;
   if (blurImmediatelyAfterTap) {
     setMobileSearchActive(true);
     requestAnimationFrame(focusSearchInputForMobile);
