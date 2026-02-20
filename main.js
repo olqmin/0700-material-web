@@ -53,6 +53,39 @@ function setMobileSearchActive(isActive) {
   document.body.classList.toggle('mobile-search-active', Boolean(isActive && mobileSearchMedia.matches && mobileDevice));
 }
 
+let pendingMobileDeactivate = null;
+let lastMobileSearchTapAt = 0;
+
+function clearMobileDeactivateTimer() {
+  if (!pendingMobileDeactivate) return;
+  clearTimeout(pendingMobileDeactivate);
+  pendingMobileDeactivate = null;
+}
+
+function isSearchInputFocused() {
+  if (!searchInput) return false;
+
+  const internalInput = searchInput.shadowRoot?.querySelector('input, textarea');
+  const shadowActive = searchInput.shadowRoot?.activeElement;
+
+  return (
+    searchInput.matches(':focus-within')
+    || document.activeElement === searchInput
+    || document.activeElement === internalInput
+    || shadowActive === internalInput
+  );
+}
+
+function scheduleMobileSearchDeactivate() {
+  clearMobileDeactivateTimer();
+  pendingMobileDeactivate = setTimeout(() => {
+    pendingMobileDeactivate = null;
+    if (!isSearchInputFocused()) {
+      setMobileSearchActive(false);
+    }
+  }, 220);
+}
+
 function focusSearchInputForMobile() {
   if (!searchInput || !mobileSearchMedia.matches || !mobileDevice) return;
 
@@ -306,22 +339,34 @@ searchInput?.addEventListener('input', (event) => {
 
 searchInput?.addEventListener('focusin', () => {
   if (!mobileSearchMedia.matches || !mobileDevice) return;
+  clearMobileDeactivateTimer();
   setMobileSearchActive(true);
 });
 
 searchInput?.addEventListener('focusout', () => {
   if (!mobileSearchMedia.matches || !mobileDevice) return;
-  setMobileSearchActive(false);
+
+  const blurImmediatelyAfterTap = Date.now() - lastMobileSearchTapAt < 900;
+  if (blurImmediatelyAfterTap) {
+    setMobileSearchActive(true);
+    requestAnimationFrame(focusSearchInputForMobile);
+    return;
+  }
+
+  scheduleMobileSearchDeactivate();
 });
 
 searchInput?.addEventListener('pointerdown', () => {
   if (!mobileSearchMedia.matches || !mobileDevice) return;
+  lastMobileSearchTapAt = Date.now();
+  clearMobileDeactivateTimer();
   setMobileSearchActive(true);
   requestAnimationFrame(focusSearchInputForMobile);
 });
 
 mobileSearchMedia.addEventListener('change', () => {
   if (!mobileSearchMedia.matches || !mobileDevice) {
+    clearMobileDeactivateTimer();
     setMobileSearchActive(false);
   }
 });
