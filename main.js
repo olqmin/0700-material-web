@@ -7,7 +7,7 @@ const searchInput = document.getElementById('searchInput');
 const callList = document.getElementById('callList');
 const statusMessage = document.getElementById('statusMessage');
 
-const mobileSearchMedia = window.matchMedia('(max-width: 768px)');
+const mobileSearchMedia = window.matchMedia('(max-width: 768px) and (hover: none) and (pointer: coarse)');
 
 function setMobileSearchActive(isActive) {
   document.body.classList.toggle('mobile-search-active', Boolean(isActive && mobileSearchMedia.matches));
