@@ -54,73 +54,31 @@ function setMobileSearchActive(isActive) {
   document.body.classList.toggle('mobile-search-active', Boolean(isActive && mobileSearchMedia.matches && mobileDevice));
 }
 
-function lockMobileSearch(ms = 2200) {
-  mobileSearchLockUntil = Date.now() + ms;
-}
-
-function mobileSearchIsLocked() {
-  return Date.now() < mobileSearchLockUntil;
-}
-
-let pendingMobileDeactivate = null;
 let lastMobileSearchTapAt = 0;
+let mobileSearchOpenedAt = 0;
 let suppressRowClickUntil = 0;
-let mobileSearchLockUntil = 0;
 let mobileSearchCloseRequested = false;
-
-function clearMobileDeactivateTimer() {
-  if (!pendingMobileDeactivate) return;
-  clearTimeout(pendingMobileDeactivate);
-  pendingMobileDeactivate = null;
-}
-
-function isSearchInputFocused() {
-  if (!searchInput) return false;
-
-  const internalInput = searchInput.shadowRoot?.querySelector('input, textarea');
-  const shadowActive = searchInput.shadowRoot?.activeElement;
-
-  return (
-    searchInput.matches(':focus-within')
-    || document.activeElement === searchInput
-    || document.activeElement === internalInput
-    || shadowActive === internalInput
-  );
-}
-
-function isKeyboardLikelyOpen() {
-  if (!mobileSearchMedia.matches || !mobileDevice) return false;
-
-  const viewportHeight = window.visualViewport?.height || window.innerHeight;
-  const layoutHeight = document.documentElement.clientHeight || window.innerHeight;
-  const delta = layoutHeight - viewportHeight;
-
-  return delta > 120;
-}
-
-function scheduleMobileSearchDeactivate() {
-  clearMobileDeactivateTimer();
-  pendingMobileDeactivate = setTimeout(() => {
-    pendingMobileDeactivate = null;
-    if (isSearchInputFocused()) return;
-
-    if (mobileSearchIsLocked() || isKeyboardLikelyOpen()) {
-      requestAnimationFrame(focusSearchInputForMobile);
-      return;
-    }
-
-    setMobileSearchActive(false);
-  }, 360);
-}
 
 function focusSearchInputForMobile() {
   if (!searchInput || !mobileSearchMedia.matches || !mobileDevice) return;
 
   searchInput.focus();
-  const internalInput = searchInput.shadowRoot?.querySelector('input');
+  const internalInput = searchInput.shadowRoot?.querySelector('input, textarea');
   internalInput?.focus();
 }
 
+function markMobileSearchOpened() {
+  mobileSearchOpenedAt = Date.now();
+  setMobileSearchActive(true);
+}
+
+function closeMobileSearch() {
+  mobileSearchCloseRequested = true;
+  const internalInput = searchInput?.shadowRoot?.querySelector('input, textarea');
+  internalInput?.blur();
+  searchInput?.blur();
+  setMobileSearchActive(false);
+}
 
 let contacts = [];
 
@@ -366,9 +324,8 @@ searchInput?.addEventListener('input', (event) => {
 
 searchInput?.addEventListener('focusin', () => {
   if (!mobileSearchMedia.matches || !mobileDevice) return;
-  clearMobileDeactivateTimer();
-  lockMobileSearch(1600);
-  setMobileSearchActive(true);
+  mobileSearchCloseRequested = false;
+  markMobileSearchOpened();
 });
 
 searchInput?.addEventListener('focusout', () => {
@@ -376,19 +333,15 @@ searchInput?.addEventListener('focusout', () => {
 
   if (mobileSearchCloseRequested) {
     mobileSearchCloseRequested = false;
-    clearMobileDeactivateTimer();
-    setMobileSearchActive(false);
     return;
   }
 
-  const blurImmediatelyAfterTap = Date.now() - lastMobileSearchTapAt < 1800;
-  if (blurImmediatelyAfterTap || mobileSearchIsLocked() || isKeyboardLikelyOpen()) {
-    setMobileSearchActive(true);
+  markMobileSearchOpened();
+
+  const blurImmediatelyAfterTap = Date.now() - lastMobileSearchTapAt < 2000;
+  if (blurImmediatelyAfterTap) {
     requestAnimationFrame(focusSearchInputForMobile);
-    return;
   }
-
-  scheduleMobileSearchDeactivate();
 });
 
 searchInput?.addEventListener('pointerdown', (event) => {
@@ -400,10 +353,9 @@ searchInput?.addEventListener('pointerdown', (event) => {
 
   const now = Date.now();
   lastMobileSearchTapAt = now;
+  mobileSearchOpenedAt = now;
   suppressRowClickUntil = now + 900;
-  lockMobileSearch(2400);
 
-  clearMobileDeactivateTimer();
   setMobileSearchActive(true);
   requestAnimationFrame(focusSearchInputForMobile);
 });
@@ -413,24 +365,22 @@ searchInput?.addEventListener('click', (event) => {
   event.stopPropagation();
 });
 
-document.addEventListener('pointerdown', (event) => {
+document.addEventListener('click', (event) => {
   if (!mobileSearchMedia.matches || !mobileDevice) return;
   if (!document.body.classList.contains('mobile-search-active')) return;
-  if (topAppBar?.contains(event.target)) return;
 
-  mobileSearchCloseRequested = true;
-  clearMobileDeactivateTimer();
+  const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+  const clickedSearchArea = path.includes(searchInput) || path.includes(topAppBar) || topAppBar?.contains(event.target);
+  if (clickedSearchArea) return;
 
-  const internalInput = searchInput?.shadowRoot?.querySelector('input, textarea');
-  internalInput?.blur();
-  searchInput?.blur();
+  const justOpened = Date.now() - mobileSearchOpenedAt < 450;
+  if (justOpened) return;
 
-  setMobileSearchActive(false);
+  closeMobileSearch();
 });
 
 mobileSearchMedia.addEventListener('change', () => {
   if (!mobileSearchMedia.matches || !mobileDevice) {
-    clearMobileDeactivateTimer();
     setMobileSearchActive(false);
   }
 });
