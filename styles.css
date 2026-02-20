@@ -102,6 +102,7 @@ body {
   min-width: 0;
   font-size: 16px;
   overflow: hidden;
+  resize: none;
 }
 
 #searchInput::part(input),
@@ -111,6 +112,13 @@ body {
 
 #searchInput:focus-visible {
   outline: none;
+}
+
+.top-app-bar,
+#searchInput,
+#searchInput::part(input),
+#searchInput::part(textarea) {
+  resize: none !important;
 }
 
 
