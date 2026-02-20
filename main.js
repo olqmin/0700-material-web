@@ -55,6 +55,7 @@ function setMobileSearchActive(isActive) {
 
 let pendingMobileDeactivate = null;
 let lastMobileSearchTapAt = 0;
+let suppressRowClickUntil = 0;
 
 function clearMobileDeactivateTimer() {
   if (!pendingMobileDeactivate) return;
@@ -362,7 +363,10 @@ searchInput?.addEventListener('pointerdown', (event) => {
   event.preventDefault();
   event.stopPropagation();
 
-  lastMobileSearchTapAt = Date.now();
+  const now = Date.now();
+  lastMobileSearchTapAt = now;
+  suppressRowClickUntil = now + 900;
+
   clearMobileDeactivateTimer();
   setMobileSearchActive(true);
   requestAnimationFrame(focusSearchInputForMobile);
@@ -380,6 +384,13 @@ mobileSearchMedia.addEventListener('change', () => {
   }
 });
 
+
+callList?.addEventListener('click', (event) => {
+  if (Date.now() <= suppressRowClickUntil) {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+});
 
 callList?.addEventListener('pointerdown', (event) => {
   const row = event.target.closest('.call-item');
