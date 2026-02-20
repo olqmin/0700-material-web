@@ -134,8 +134,8 @@ body {
 
 #searchInput:focus-within {
   border-color: var(--search-field-border);
-  box-shadow: 0 0 0 2px var(--search-field-focus-ring), var(--search-field-shadow);
-  transform: translateY(-1px);
+  box-shadow: inset 0 0 0 2px var(--search-field-focus-ring), var(--search-field-shadow);
+  transform: none;
 }
 
 .top-app-bar,
