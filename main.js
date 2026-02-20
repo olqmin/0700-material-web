@@ -8,6 +8,7 @@ const callList = document.getElementById('callList');
 const statusMessage = document.getElementById('statusMessage');
 const loadingOverlay = document.getElementById('loadingOverlay');
 const loadingText = document.getElementById('loadingText');
+const topAppBar = document.querySelector('.top-app-bar');
 
 const mobileSearchMedia = window.matchMedia('(max-width: 768px) and (hover: none) and (pointer: coarse)');
 
@@ -53,9 +54,19 @@ function setMobileSearchActive(isActive) {
   document.body.classList.toggle('mobile-search-active', Boolean(isActive && mobileSearchMedia.matches && mobileDevice));
 }
 
+function lockMobileSearch(ms = 2200) {
+  mobileSearchLockUntil = Date.now() + ms;
+}
+
+function mobileSearchIsLocked() {
+  return Date.now() < mobileSearchLockUntil;
+}
+
 let pendingMobileDeactivate = null;
 let lastMobileSearchTapAt = 0;
 let suppressRowClickUntil = 0;
+let mobileSearchLockUntil = 0;
+let mobileSearchCloseRequested = false;
 
 function clearMobileDeactivateTimer() {
   if (!pendingMobileDeactivate) return;
@@ -93,13 +104,13 @@ function scheduleMobileSearchDeactivate() {
     pendingMobileDeactivate = null;
     if (isSearchInputFocused()) return;
 
-    if (isKeyboardLikelyOpen()) {
+    if (mobileSearchIsLocked() || isKeyboardLikelyOpen()) {
       requestAnimationFrame(focusSearchInputForMobile);
       return;
     }
 
     setMobileSearchActive(false);
-  }, 320);
+  }, 360);
 }
 
 function focusSearchInputForMobile() {
@@ -356,14 +367,22 @@ searchInput?.addEventListener('input', (event) => {
 searchInput?.addEventListener('focusin', () => {
   if (!mobileSearchMedia.matches || !mobileDevice) return;
   clearMobileDeactivateTimer();
+  lockMobileSearch(1600);
   setMobileSearchActive(true);
 });
 
 searchInput?.addEventListener('focusout', () => {
   if (!mobileSearchMedia.matches || !mobileDevice) return;
 
+  if (mobileSearchCloseRequested) {
+    mobileSearchCloseRequested = false;
+    clearMobileDeactivateTimer();
+    setMobileSearchActive(false);
+    return;
+  }
+
   const blurImmediatelyAfterTap = Date.now() - lastMobileSearchTapAt < 1800;
-  if (blurImmediatelyAfterTap) {
+  if (blurImmediatelyAfterTap || mobileSearchIsLocked() || isKeyboardLikelyOpen()) {
     setMobileSearchActive(true);
     requestAnimationFrame(focusSearchInputForMobile);
     return;
@@ -377,9 +396,12 @@ searchInput?.addEventListener('pointerdown', (event) => {
 
   event.stopPropagation();
 
+  mobileSearchCloseRequested = false;
+
   const now = Date.now();
   lastMobileSearchTapAt = now;
   suppressRowClickUntil = now + 900;
+  lockMobileSearch(2400);
 
   clearMobileDeactivateTimer();
   setMobileSearchActive(true);
@@ -389,6 +411,21 @@ searchInput?.addEventListener('pointerdown', (event) => {
 searchInput?.addEventListener('click', (event) => {
   if (!mobileSearchMedia.matches || !mobileDevice) return;
   event.stopPropagation();
+});
+
+document.addEventListener('pointerdown', (event) => {
+  if (!mobileSearchMedia.matches || !mobileDevice) return;
+  if (!document.body.classList.contains('mobile-search-active')) return;
+  if (topAppBar?.contains(event.target)) return;
+
+  mobileSearchCloseRequested = true;
+  clearMobileDeactivateTimer();
+
+  const internalInput = searchInput?.shadowRoot?.querySelector('input, textarea');
+  internalInput?.blur();
+  searchInput?.blur();
+
+  setMobileSearchActive(false);
 });
 
 mobileSearchMedia.addEventListener('change', () => {
