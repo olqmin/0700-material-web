@@ -338,15 +338,19 @@ searchInput?.addEventListener('pointerdown', (event) => {
   mobileSearchCloseRequested = false;
 
   const now = Date.now();
-  mobileSearchOpenedAt = now;
   suppressRowClickUntil = now + 900;
-
-  setMobileSearchActive(true);
 });
 
 searchInput?.addEventListener('click', (event) => {
   if (!mobileSearchMedia.matches || !mobileDevice) return;
   event.stopPropagation();
+
+  if (searchInput.matches(':focus-within')) return;
+
+  const internalInput = searchInput.shadowRoot?.querySelector('input, textarea');
+  internalInput?.focus();
+  searchInput.focus();
+  markMobileSearchOpened();
 });
 
 document.addEventListener('click', (event) => {
