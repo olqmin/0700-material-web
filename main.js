@@ -59,14 +59,6 @@ let mobileSearchOpenedAt = 0;
 let suppressRowClickUntil = 0;
 let mobileSearchCloseRequested = false;
 
-function focusSearchInputForMobile() {
-  if (!searchInput || !mobileSearchMedia.matches || !mobileDevice) return;
-
-  searchInput.focus();
-  const internalInput = searchInput.shadowRoot?.querySelector('input, textarea');
-  internalInput?.focus();
-}
-
 function markMobileSearchOpened() {
   mobileSearchOpenedAt = Date.now();
   setMobileSearchActive(true);
@@ -337,11 +329,6 @@ searchInput?.addEventListener('focusout', () => {
   }
 
   markMobileSearchOpened();
-
-  const blurImmediatelyAfterTap = Date.now() - lastMobileSearchTapAt < 2000;
-  if (blurImmediatelyAfterTap) {
-    requestAnimationFrame(focusSearchInputForMobile);
-  }
 });
 
 searchInput?.addEventListener('pointerdown', (event) => {
@@ -357,7 +344,6 @@ searchInput?.addEventListener('pointerdown', (event) => {
   suppressRowClickUntil = now + 900;
 
   setMobileSearchActive(true);
-  requestAnimationFrame(focusSearchInputForMobile);
 });
 
 searchInput?.addEventListener('click', (event) => {
