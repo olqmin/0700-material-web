@@ -330,27 +330,12 @@ searchInput?.addEventListener('focusout', () => {
   markMobileSearchOpened();
 });
 
-searchInput?.addEventListener('pointerdown', (event) => {
+searchInput?.addEventListener('pointerdown', () => {
   if (!mobileSearchMedia.matches || !mobileDevice) return;
-
-  event.stopPropagation();
 
   mobileSearchCloseRequested = false;
-
-  const now = Date.now();
-  suppressRowClickUntil = now + 900;
-});
-
-searchInput?.addEventListener('click', (event) => {
-  if (!mobileSearchMedia.matches || !mobileDevice) return;
-  event.stopPropagation();
-
-  if (searchInput.matches(':focus-within')) return;
-
-  const internalInput = searchInput.shadowRoot?.querySelector('input, textarea');
-  internalInput?.focus();
-  searchInput.focus();
-  markMobileSearchOpened();
+  mobileSearchOpenedAt = Date.now();
+  suppressRowClickUntil = Date.now() + 900;
 });
 
 document.addEventListener('click', (event) => {
