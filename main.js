@@ -63,6 +63,21 @@ function markMobileSearchOpened() {
   setMobileSearchActive(true);
 }
 
+function focusSearchAfterMobileOpen() {
+  if (!mobileSearchMedia.matches || !mobileDevice || !searchInput) return;
+
+  const focusInternal = () => {
+    const internalInput = searchInput.shadowRoot?.querySelector('input, textarea');
+    internalInput?.focus();
+    searchInput.focus();
+  };
+
+  requestAnimationFrame(() => {
+    focusInternal();
+    setTimeout(focusInternal, 60);
+  });
+}
+
 function closeMobileSearch() {
   mobileSearchCloseRequested = true;
   const internalInput = searchInput?.shadowRoot?.querySelector('input, textarea');
@@ -339,6 +354,14 @@ searchInput?.addEventListener('pointerdown', () => {
   mobileSearchCloseRequested = false;
   mobileSearchOpenedAt = Date.now();
   suppressRowClickUntil = Date.now() + 900;
+});
+
+searchInput?.addEventListener('click', () => {
+  if (!mobileSearchMedia.matches || !mobileDevice) return;
+
+  mobileSearchCloseRequested = false;
+  markMobileSearchOpened();
+  focusSearchAfterMobileOpen();
 });
 
 document.addEventListener('click', (event) => {
