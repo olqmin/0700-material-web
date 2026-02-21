@@ -54,7 +54,6 @@ function setMobileSearchActive(isActive) {
   document.body.classList.toggle('mobile-search-active', Boolean(isActive && mobileSearchMedia.matches && mobileDevice));
 }
 
-let lastMobileSearchTapAt = 0;
 let mobileSearchOpenedAt = 0;
 let suppressRowClickUntil = 0;
 let mobileSearchCloseRequested = false;
@@ -339,7 +338,6 @@ searchInput?.addEventListener('pointerdown', (event) => {
   mobileSearchCloseRequested = false;
 
   const now = Date.now();
-  lastMobileSearchTapAt = now;
   mobileSearchOpenedAt = now;
   suppressRowClickUntil = now + 900;
 
@@ -359,7 +357,10 @@ document.addEventListener('click', (event) => {
   const clickedSearchArea = path.includes(searchInput) || path.includes(topAppBar) || topAppBar?.contains(event.target);
   if (clickedSearchArea) return;
 
-  const justOpened = Date.now() - mobileSearchOpenedAt < 450;
+  const stillFocused = searchInput?.matches(':focus-within');
+  if (stillFocused) return;
+
+  const justOpened = Date.now() - mobileSearchOpenedAt < 500;
   if (justOpened) return;
 
   closeMobileSearch();
