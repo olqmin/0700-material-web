@@ -327,7 +327,10 @@ searchInput?.addEventListener('focusout', () => {
     return;
   }
 
-  markMobileSearchOpened();
+  const stillFocused = searchInput.matches(':focus-within');
+  if (!stillFocused) {
+    setMobileSearchActive(false);
+  }
 });
 
 searchInput?.addEventListener('pointerdown', () => {
